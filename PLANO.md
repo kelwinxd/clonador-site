@@ -23,8 +23,9 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       num endpoint de download e o resultado tem prazo de validade.
       *Pronto: 10 clones ao mesmo tempo nunca abrem mais que N navegadores.*
 - [ ] **Etapa 7** — progresso por WebSocket, uma sala por job.
-- [ ] **Etapa 8** — interface: formulário, barra de progresso, prévia em iframe, download e
-      mensagem certa para cada erro.
+- [x] **Etapa 8** — interface: formulário, barra de progresso, prévia em iframe, download e
+      mensagem certa para cada erro. A prévia abre o zip no próprio navegador (JSZip), sem
+      depender de armazenamento no servidor; a barra é indeterminada até a Etapa 7.
 - [ ] **Etapa 9** — deploy: Dockerfile com imagem do Playwright, Railway, Redis, limite de
       requisições e health check. Aqui entra também a correção do DNS rebinding (fixar o IP já
       verificado na conexão).
