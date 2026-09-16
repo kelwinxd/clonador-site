@@ -1,0 +1,28 @@
+@import url("/assets/fontes.css");
+
+:root {
+  --cor: #1b4332;
+}
+
+body {
+  font-family: "TesteFonte", system-ui, sans-serif;
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 24px;
+  color: var(--cor);
+  background: url("/assets/fundo.svg") repeat;
+}
+
+.botao {
+  display: inline-block;
+  padding: 16px 32px;
+  background: #2d6a4f;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.preco {
+  font-size: 24px;
+  font-weight: 700;
+}

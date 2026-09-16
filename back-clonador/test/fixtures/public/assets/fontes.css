@@ -1,0 +1,5 @@
+@font-face {
+  font-family: "TesteFonte";
+  src: url("/assets/fonte-teste.woff2") format("woff2");
+  font-display: swap;
+}

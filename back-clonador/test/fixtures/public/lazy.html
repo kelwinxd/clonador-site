@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Imagens com carregamento tardio</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <h1>Galeria com lazy load</h1>
+    <img
+      src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+      data-src="/assets/produto.svg"
+      data-srcset="/assets/hero-400.svg 400w, /assets/hero-800.svg 800w"
+      loading="lazy"
+      alt="Produto"
+    />
+    <picture>
+      <source srcset="/assets/hero-800.svg 800w" media="(min-width: 600px)" />
+      <img src="/assets/hero-400.svg" alt="Hero" />
+    </picture>
+    <div style="background-image: url('/assets/selo.svg'); width: 64px; height: 64px"></div>
+  </body>
+</html>
