@@ -24,7 +24,26 @@ const MIME: Record<string, string> = {
 
 export function createFixtureServer(): Server {
   return createServer(async (req, res) => {
-    const path = normalize(decodeURIComponent((req.url ?? '/').split('?')[0]));
+    const requestUrl = new URL(req.url ?? '/', 'http://fixture.local');
+
+    // Deixa o JavaScript das páginas de teste ler respostas de outra origem. Sem isso o
+    // teste de vazamento passaria por causa do CORS, e não por causa da trava.
+    res.setHeader('access-control-allow-origin', '*');
+
+    // /redireciona?para=URL — simula um site que manda o visitante para outro endereço.
+    if (requestUrl.pathname === '/redireciona') {
+      res.writeHead(302, { location: requestUrl.searchParams.get('para') ?? '/' }).end();
+      return;
+    }
+
+    // /anti-robo.html — só entrega para quem parece navegador (manda sec-fetch-mode).
+    // Cliente HTTP simples recebe 403, como acontece em sites com proteção contra robôs.
+    if (requestUrl.pathname === '/anti-robo.html' && !req.headers['sec-fetch-mode']) {
+      res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' }).end('acesso negado');
+      return;
+    }
+
+    const path = normalize(decodeURIComponent(requestUrl.pathname));
     // Bloqueia ../ para não servir arquivo fora da pasta public.
     const file = join(ROOT, path.replace(/^(\.\.[/\\])+/, ''));
 

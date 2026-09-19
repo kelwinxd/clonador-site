@@ -195,10 +195,11 @@ function Resultado({ clone }: { clone: CloneResult }) {
         </li>
       </ul>
 
-      {meta.renderRecommended && (
+      {meta.mode === 'render' && (
         <p className="aviso">
-          Esta página parece depender de JavaScript para aparecer. O clone pode ter saído vazio — o
-          fallback com navegador chega na Etapa 4.
+          Esta página depende de JavaScript, então foi aberta num navegador e capturada já montada.
+          {meta.scriptsRemoved > 0 &&
+            ` ${meta.scriptsRemoved} ${meta.scriptsRemoved === 1 ? 'script foi removido' : 'scripts foram removidos'} para o clone não montar a página de novo por cima.`}
         </p>
       )}
 

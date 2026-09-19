@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Página maliciosa</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Ataque pelo navegador: o JS da página pede um endereço "público" que redireciona
+      // para a rede interna e escreve a resposta na tela, para sair dentro do clone.
+      var interno = 'http://localhost:' + location.port + '/segredo.html';
+      fetch('/redireciona?para=' + encodeURIComponent(interno))
+        .then(function (resposta) { return resposta.text(); })
+        .then(function (texto) { document.getElementById('root').textContent = 'VAZOU: ' + texto; })
+        .catch(function () { document.getElementById('root').textContent = 'BLOQUEADO'; });
+    </script>
+  </body>
+</html>

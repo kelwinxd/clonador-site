@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Página com proteção contra robôs</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="icon" href="/assets/favicon.svg" />
+    <style>
+      .selo {
+        background-image: url('/assets/selo.svg');
+        background-size: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topo">
+      <img src="/assets/logo.svg" alt="Logo" width="120" />
+    </header>
+
+    <main>
+      <h1>Método Completo de Teste</h1>
+
+      <p>
+        Esta é uma página de venda estática usada para testar o clonador. O texto é comprido de
+        propósito: uma página de venda de verdade tem bastante conteúdo, e o detector de página
+        vazia precisa de uma amostra realista para não confundir uma oferta pronta com um SPA que
+        ainda não montou.
+      </p>
+
+      <img
+        src="/assets/hero-800.svg"
+        srcset="/assets/hero-400.svg 400w, /assets/hero-800.svg 800w"
+        sizes="(max-width: 600px) 400px, 800px"
+        alt="Imagem principal"
+      />
+
+      <h2>O que você vai aprender</h2>
+      <ul>
+        <li>Montar a estrutura do projeto do zero, sem copiar configuração pronta.</li>
+        <li>Buscar uma página com HTTP simples antes de gastar memória com navegador.</li>
+        <li>Reescrever os caminhos dos arquivos para que a cópia abra sem internet.</li>
+        <li>Baixar dezenas de arquivos em paralelo sem derrubar o servidor de origem.</li>
+        <li>Empacotar tudo num zip pronto para subir em qualquer hospedagem.</li>
+      </ul>
+
+      <h2>Para quem é</h2>
+      <p>
+        Para quem trabalha com página de venda e precisa publicar uma versão autorizada rápido, sem
+        depender de terceiros a cada ajuste. O conteúdo parte do básico e chega na parte de
+        desempenho, que é onde a maioria dos projetos trava quando começa a receber acesso de
+        verdade.
+      </p>
+
+      <div class="selo" style="width: 64px; height: 64px"></div>
+
+      <h2>Garantia</h2>
+      <p>
+        São sete dias para pedir o reembolso. Se não fizer sentido para você, basta responder o
+        e-mail de confirmação da compra e a devolução é feita sem perguntas.
+      </p>
+
+      <p class="preco">De R$ 997 por R$ 297</p>
+      <a class="botao" href="https://pay.exemplo-checkout.com/produto/ABC123">Quero comprar agora</a>
+
+      <p><a href="https://exemplo.com/politica">Política de privacidade</a></p>
+    </main>
+
+    <script src="/assets/app.js"></script>
+  </body>
+</html>

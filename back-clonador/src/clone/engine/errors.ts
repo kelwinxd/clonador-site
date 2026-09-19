@@ -12,6 +12,8 @@ export class CloneError extends Error {
   constructor(
     readonly code: CloneErrorCode,
     message: string,
+    /** Status HTTP quando a falha veio de uma resposta do site (403, 429...). */
+    readonly httpStatus?: number,
   ) {
     super(message);
     this.name = 'CloneError';

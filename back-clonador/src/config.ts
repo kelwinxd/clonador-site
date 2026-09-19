@@ -19,6 +19,15 @@ export const LIMITS = {
   assetConcurrency: 8,
   /** Redirecionamentos seguidos antes de desistir. */
   maxRedirects: 5,
+
+  /** Navegação no Playwright: tempo máximo para a página abrir. */
+  renderTimeoutMs: 30_000,
+  /** Espera pela rede ficar quieta. Página com polling nunca fica, então tem teto. */
+  renderIdleMs: 5_000,
+  /** Quantas telas rolar para disparar imagens e seções que carregam tarde. */
+  renderScrollSteps: 15,
+  /** Abas renderizando ao mesmo tempo no mesmo navegador. A fila da Etapa 6 limita o resto. */
+  maxRenderPages: 2,
 } as const;
 
 /** User-Agent de navegador real: muitas páginas recusam clientes sem isso. */

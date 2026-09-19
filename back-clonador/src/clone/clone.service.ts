@@ -1,11 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { downloadAssets } from './engine/asset-downloader';
+import { BrowserService } from './browser.service';
+import { downloadPageAssets } from './engine/asset-pipeline';
+import { CloneError } from './engine/errors';
 import { fetchPage } from './engine/fetcher';
-import { collectAssets, parseHtml, rewriteAssets } from './engine/html-rewriter';
+import { CheerioDoc, collectAssets, parseHtml, rewriteAssets } from './engine/html-rewriter';
 import { LinkRule, replaceLinks } from './engine/link-replacer';
-import { PageMode } from './engine/page-source';
-import { needsRender } from './engine/render-detector';
+import { PageMode, PageSource } from './engine/page-source';
 import { buildZip } from './engine/packager';
+import { needsRender } from './engine/render-detector';
+import { renderPage } from './engine/renderer';
+import { stripFrameworkScripts } from './engine/script-stripper';
 
 export interface CloneInput {
   url: string;
@@ -17,9 +21,11 @@ export interface CloneMeta {
   sourceUrl: string;
   finalUrl: string;
   mode: PageMode;
-  /** O detector achou que a página precisa de navegador? (fallback chega na Etapa 4) */
+  /** O detector (ou o usuário, ou um bloqueio no fetch) pediu navegador? */
   renderRecommended: boolean;
   reason: string;
+  /** Scripts do framework tirados no modo render. */
+  scriptsRemoved: number;
   assets: number;
   failedAssets: Array<{ url: string; reason: string }>;
   totalBytes: number;
@@ -34,34 +40,40 @@ export interface CloneResult {
   fileName: string;
 }
 
+/** Respostas de "não quero robô" que costumam passar num navegador de verdade. */
+const RETRY_WITH_BROWSER_STATUS = new Set([401, 403, 429, 503]);
+
+interface ObtainedPage {
+  source: PageSource;
+  $: CheerioDoc;
+  renderRecommended: boolean;
+  reason: string;
+}
+
 /**
  * Orquestrador do pipeline. Cada passo mora em engine/ e é testado sozinho:
- * buscar -> parsear -> listar assets -> baixar -> reescrever -> trocar links -> empacotar.
+ * buscar (fetch, com navegador como plano B) -> parsear -> listar assets -> baixar
+ * -> reescrever -> trocar links -> empacotar.
  */
 @Injectable()
 export class CloneService {
   private readonly logger = new Logger(CloneService.name);
 
+  constructor(private readonly browser: BrowserService) {}
+
   async clone(input: CloneInput): Promise<CloneResult> {
     const startedAt = Date.now();
 
-    // 1. HTTP simples primeiro. O navegador (Playwright) é plano B e entra na Etapa 4.
-    const source = await fetchPage(input.url);
-    this.logger.log(`fetch ok: ${source.finalUrl}`);
+    // 1. Pega o HTML: fetch primeiro, navegador só se precisar.
+    const { source, $, renderRecommended, reason } = await this.obtainPage(input);
+    this.logger.log(`${source.mode}: ${source.finalUrl} — ${reason}`);
 
-    // 2. Parse e checagem: a página veio pronta ou está vazia esperando o JS?
-    const $ = parseHtml(source.html);
-    const decision = input.forceRender
-      ? { render: true, reason: 'renderização forçada pelo usuário' }
-      : needsRender($);
-    this.logger.log(`detector: ${decision.render ? 'precisa renderizar' : 'ok'} — ${decision.reason}`);
-    // O fallback com Playwright entra na Etapa 4; por enquanto a decisão só é registrada.
+    // 2. Página renderizada sai sem os scripts do framework (senão monta duas vezes).
+    const scripts = source.mode === 'render' ? stripFrameworkScripts($, source.finalUrl) : null;
 
+    // 3. Lista e baixa os arquivos (inclusive o que os .css carregam por dentro).
     const assetUrls = collectAssets($, source.finalUrl);
-    this.logger.log(`${assetUrls.length} assets encontrados`);
-
-    // 3. Download em paralelo (p-limit).
-    const download = await downloadAssets(assetUrls, { referer: source.finalUrl });
+    const download = await downloadPageAssets(assetUrls, { referer: source.finalUrl });
 
     // 4. Aponta o HTML para os arquivos locais.
     rewriteAssets($, source.finalUrl, download.map);
@@ -73,8 +85,9 @@ export class CloneService {
       sourceUrl: input.url,
       finalUrl: source.finalUrl,
       mode: source.mode,
-      renderRecommended: decision.render,
-      reason: decision.reason,
+      renderRecommended,
+      reason,
+      scriptsRemoved: scripts?.removed ?? 0,
       assets: download.assets.length,
       failedAssets: download.failed,
       totalBytes: download.totalBytes,
@@ -91,10 +104,51 @@ export class CloneService {
     ]);
 
     this.logger.log(
-      `clone concluído em ${Date.now() - startedAt}ms — ${download.assets.length} assets, ${download.failed.length} falhas`,
+      `clone concluído em ${Date.now() - startedAt}ms — ${source.mode}, ${download.assets.length} assets, ${download.failed.length} falhas`,
     );
 
     return { zip, meta, fileName: buildFileName(source.finalUrl) };
+  }
+
+  /**
+   * A estratégia híbrida inteira mora aqui:
+   * 1. forçado pelo usuário -> navegador direto;
+   * 2. fetch recusado com cara de anti-robô (403, 429...) -> tenta no navegador;
+   * 3. fetch ok mas HTML vazio (detector) -> navegador;
+   * 4. fetch ok e HTML pronto -> segue sem navegador.
+   */
+  private async obtainPage(input: CloneInput): Promise<ObtainedPage> {
+    if (input.forceRender) {
+      return this.rendered(input.url, 'renderização forçada pelo usuário');
+    }
+
+    let fetched: PageSource;
+    try {
+      fetched = await fetchPage(input.url);
+    } catch (error) {
+      if (
+        error instanceof CloneError &&
+        error.httpStatus !== undefined &&
+        RETRY_WITH_BROWSER_STATUS.has(error.httpStatus)
+      ) {
+        return this.rendered(input.url, `fetch recusado (${error.httpStatus}), aberto no navegador`);
+      }
+      throw error;
+    }
+
+    const $ = parseHtml(fetched.html);
+    const decision = needsRender($);
+
+    if (!decision.render) {
+      return { source: fetched, $, renderRecommended: false, reason: decision.reason };
+    }
+
+    return this.rendered(fetched.finalUrl, `${decision.reason}, aberto no navegador`);
+  }
+
+  private async rendered(url: string, reason: string): Promise<ObtainedPage> {
+    const source = await this.browser.withContext((context) => renderPage(context, url));
+    return { source, $: parseHtml(source.html), renderRecommended: true, reason };
   }
 }
 

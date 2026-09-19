@@ -42,14 +42,18 @@ export async function httpGet(rawUrl: string, options: HttpOptions = {}): Promis
       if (!target) {
         throw new CloneError('FETCH_FAILED', `Redirecionamento ${response.statusCode} sem destino`);
       }
-      response.body.destroy();
+      await response.body.dump().catch(() => undefined);
       current = parseTargetUrl(new URL(target, current).toString());
       continue;
     }
 
     if (response.statusCode >= 400) {
-      response.body.destroy();
-      throw new CloneError('FETCH_FAILED', `A página respondeu ${response.statusCode}`);
+      await response.body.dump().catch(() => undefined);
+      throw new CloneError(
+        'FETCH_FAILED',
+        `A página respondeu ${response.statusCode}`,
+        response.statusCode,
+      );
     }
 
     const body = await readWithLimit(response.body, maxBytes, current.toString());

@@ -5,6 +5,7 @@ export interface CloneMeta {
   mode: 'fetch' | 'render';
   renderRecommended: boolean;
   reason: string;
+  scriptsRemoved: number;
   assets: number;
   failedAssets: Array<{ url: string; reason: string }>;
   totalBytes: number;

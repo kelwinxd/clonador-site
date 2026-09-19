@@ -12,13 +12,15 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
 
 - [x] **Etapa 1** — motor dividido em módulos (`engine/`), com teste por peça.
 - [x] **Etapa 2** — busca por HTTP simples com `undici` + trava de SSRF.
-- [x] **Etapa 3** — detector de página vazia (`render-detector.ts`). A decisão já é registrada no
-      `clone-info.json`; falta ligar no fallback.
-- [ ] **Etapa 4** — Playwright como plano B: um navegador reusado, contexto por job, bloqueio de
-      recursos, rolagem para carregar imagens tardias e remoção dos scripts de framework.
-      *Pronto: a fixture `spa.html` é clonada e a memória fica estável depois de 20 clones.*
-- [ ] **Etapa 5** — assets completos: `url()` e `@import` dentro dos arquivos CSS, fontes,
-      favicon. *Pronto: um teste abre o zip extraído no navegador e não acha nenhum 404.*
+- [x] **Etapa 3** — detector de página vazia (`render-detector.ts`), ligado ao fallback da Etapa 4.
+- [x] **Etapa 4** — Playwright como plano B (`renderer.ts` + `browser.service.ts`): um navegador
+      reusado, contexto por job, bloqueio de imagem/mídia/fonte/analytics, rolagem para lazy load e
+      remoção dos scripts de framework (`script-stripper.ts`). A trava de SSRF também vale dentro do
+      navegador: cada requisição e cada redirecionamento do JavaScript da página é checado. O híbrido
+      também tenta o navegador quando o fetch é recusado com cara de anti-robô (403, 429...).
+- [x] **Etapa 5** — assets dentro do CSS (`css-assets.ts` + `asset-pipeline.ts`): segue `url()` e
+      `@import` em cadeia, baixa fontes e fundos, e reescreve cada `.css` para caminhos locais.
+      *Pronto: teste confirma o zip sem nenhuma referência local quebrada (sem 404).*
 - [ ] **Etapa 6** — fila com BullMQ + Redis. `POST /clone` passa a devolver `{ jobId }`, o zip sai
       num endpoint de download e o resultado tem prazo de validade.
       *Pronto: 10 clones ao mesmo tempo nunca abrem mais que N navegadores.*

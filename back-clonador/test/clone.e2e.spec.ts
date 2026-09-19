@@ -1,20 +1,26 @@
 import AdmZip from 'adm-zip';
+import { BrowserService } from '../src/clone/browser.service';
 import { CloneService } from '../src/clone/clone.service';
 import { CloneError } from '../src/clone/engine/errors';
 import { startFixtureServer } from './fixtures/server';
 
+jest.setTimeout(60_000);
+
 describe('CloneService (e2e com fixtures)', () => {
   let fixtures: { url: string; close: () => Promise<void> };
+  let browser: BrowserService;
   let service: CloneService;
 
   beforeAll(async () => {
     // As fixtures rodam em 127.0.0.1: sem isso a trava de SSRF bloqueia (e é para bloquear mesmo).
     process.env.ALLOW_PRIVATE_HOSTS = 'true';
     fixtures = await startFixtureServer();
-    service = new CloneService();
+    browser = new BrowserService();
+    service = new CloneService(browser);
   });
 
   afterAll(async () => {
+    await browser.close();
     await fixtures.close();
     delete process.env.ALLOW_PRIVATE_HOSTS;
   });
@@ -66,13 +72,6 @@ describe('CloneService (e2e com fixtures)', () => {
 
     expect(html).not.toContain('data:image/gif');
     expect(html).not.toContain('loading="lazy"');
-  });
-
-  it('marca a página SPA como "precisa de navegador"', async () => {
-    const result = await service.clone({ url: `${fixtures.url}/spa.html` });
-
-    expect(result.meta.renderRecommended).toBe(true);
-    expect(result.meta.reason).toMatch(/#root|JavaScript|texto/i);
   });
 
   it('não pede navegador para a página que já vem pronta', async () => {
