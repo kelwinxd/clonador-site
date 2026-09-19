@@ -33,11 +33,54 @@ export interface CloneParams {
   forceRender?: boolean;
 }
 
+/** Estágios que o backend reporta enquanto o clone roda. */
+export type CloneStage = 'fetching' | 'rendering' | 'downloading' | 'packaging';
+
+export interface CloneProgress {
+  stage: CloneStage;
+  done?: number;
+  total?: number;
+}
+
+type JobState = 'waiting' | 'active' | 'completed' | 'failed' | 'unknown';
+
+interface StatusResponse {
+  id: string;
+  state: JobState;
+  progress: CloneProgress | null;
+  result: { fileName: string; meta: CloneMeta } | null;
+  error: { code: string; message: string } | null;
+}
+
+async function lerJson(response: Response): Promise<Record<string, unknown> | null> {
+  return response.json().catch(() => null);
+}
+
+function erroDoCorpo(corpo: Record<string, unknown> | null, status: number): ApiError {
+  const codigo = corpo?.code as CloneErrorCode | undefined;
+  const msg = corpo?.message;
+  const detalhe = Array.isArray(msg) ? msg.join(' ') : (msg as string | undefined);
+  if (codigo && codigo in MENSAGEM_POR_CODIGO) return new ApiError(codigo, detalhe);
+  return new ApiError('FETCH_FAILED', detalhe ?? `Erro ${status}`);
+}
+
 /**
- * Chama POST /clone. A resposta é o zip no corpo e o resumo no cabeçalho X-Clone-Meta.
- * Na Etapa 6 isso vira { jobId } + WebSocket; só esta função muda.
+ * Etapa 6: a API é assíncrona. Aqui a gente enfileira o job, acompanha o progresso
+ * por polling e, quando termina, baixa o zip. O WebSocket da Etapa 7 troca só o meio
+ * (o acompanhamento), não as pontas.
  */
-export async function cloneSite(params: CloneParams): Promise<CloneResult> {
+export async function cloneSite(
+  params: CloneParams,
+  onProgress?: (progress: CloneProgress) => void,
+): Promise<CloneResult> {
+  const id = await enfileirar(params);
+  const status = await acompanhar(id, onProgress);
+  const blob = await baixarZip(id);
+
+  return { meta: status.result!.meta, blob, fileName: status.result!.fileName };
+}
+
+async function enfileirar(params: CloneParams): Promise<string> {
   let response: Response;
   try {
     response = await fetch(`${API_URL}/clone`, {
@@ -48,29 +91,52 @@ export async function cloneSite(params: CloneParams): Promise<CloneResult> {
   } catch {
     throw new ApiError('NETWORK');
   }
-
-  if (!response.ok) {
-    const corpo = await response.json().catch(() => null);
-    const codigo = corpo?.code as CloneErrorCode | undefined;
-    const detalhe = Array.isArray(corpo?.message) ? corpo.message.join(' ') : corpo?.message;
-    if (codigo && codigo in MENSAGEM_POR_CODIGO) {
-      throw new ApiError(codigo, detalhe);
-    }
-    throw new ApiError('FETCH_FAILED', detalhe ?? `Erro ${response.status}`);
-  }
-
-  const cabecalho = response.headers.get('X-Clone-Meta');
-  const meta = JSON.parse(decodeURIComponent(cabecalho ?? '')) as CloneMeta;
-
-  return {
-    meta,
-    blob: await response.blob(),
-    fileName: nomeDoArquivo(response.headers.get('Content-Disposition')),
-  };
+  if (!response.ok) throw erroDoCorpo(await lerJson(response), response.status);
+  const corpo = (await lerJson(response)) as { id?: string } | null;
+  if (!corpo?.id) throw new ApiError('FETCH_FAILED', 'A API não devolveu o id do job.');
+  return corpo.id;
 }
 
-function nomeDoArquivo(contentDisposition: string | null): string {
-  return contentDisposition?.match(/filename="(.+?)"/)?.[1] ?? 'clone.zip';
+/** Pergunta o estado do job até terminar (ou falhar). */
+async function acompanhar(
+  id: string,
+  onProgress?: (progress: CloneProgress) => void,
+): Promise<StatusResponse> {
+  const intervaloMs = 700;
+  const limite = Date.now() + 5 * 60_000;
+
+  while (Date.now() < limite) {
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/clone/${id}`);
+    } catch {
+      throw new ApiError('NETWORK');
+    }
+    if (!response.ok) throw erroDoCorpo(await lerJson(response), response.status);
+
+    const status = (await lerJson(response)) as unknown as StatusResponse;
+    if (status.progress) onProgress?.(status.progress);
+
+    if (status.state === 'completed' && status.result) return status;
+    if (status.state === 'failed') {
+      const code = (status.error?.code ?? 'FETCH_FAILED') as CloneErrorCode;
+      throw new ApiError(code in MENSAGEM_POR_CODIGO ? code : 'FETCH_FAILED', status.error?.message);
+    }
+
+    await new Promise((r) => setTimeout(r, intervaloMs));
+  }
+  throw new ApiError('TIMEOUT', 'O clone demorou mais que o esperado.');
+}
+
+async function baixarZip(id: string): Promise<Blob> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/clone/${id}/download`);
+  } catch {
+    throw new ApiError('NETWORK');
+  }
+  if (!response.ok) throw erroDoCorpo(await lerJson(response), response.status);
+  return response.blob();
 }
 
 export function baixarArquivo(blob: Blob, fileName: string): void {

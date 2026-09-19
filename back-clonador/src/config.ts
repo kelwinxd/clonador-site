@@ -26,9 +26,30 @@ export const LIMITS = {
   renderIdleMs: 5_000,
   /** Quantas telas rolar para disparar imagens e seções que carregam tarde. */
   renderScrollSteps: 15,
-  /** Abas renderizando ao mesmo tempo no mesmo navegador. A fila da Etapa 6 limita o resto. */
+  /** Abas renderizando ao mesmo tempo no mesmo navegador. A fila limita o resto. */
   maxRenderPages: 2,
 } as const;
+
+/** Fila (BullMQ) e armazenamento do resultado. */
+export const QUEUE = {
+  /** Nome da fila no Redis. */
+  name: 'clone',
+  /**
+   * Jobs processados ao mesmo tempo por instância. Fica acima de maxRenderPages de propósito:
+   * clones que só usam fetch não ficam presos atrás dos que abrem o navegador.
+   */
+  concurrency: Number(process.env.CLONE_CONCURRENCY ?? 5),
+  /** Quanto tempo o .zip fica disponível para download antes da limpeza. */
+  resultTtlMs: Number(process.env.RESULT_TTL_MS ?? 30 * 60_000),
+  /** De quanto em quanto tempo a limpeza roda. */
+  cleanupEveryMs: 5 * 60_000,
+  /** Jobs concluídos/falhados que o Redis guarda (para o status ainda responder). */
+  keepCompleted: 200,
+  keepFailed: 200,
+} as const;
+
+/** URL do Redis. */
+export const REDIS_URL = process.env.REDIS_URL ?? 'redis://127.0.0.1:6379';
 
 /** User-Agent de navegador real: muitas páginas recusam clientes sem isso. */
 export const USER_AGENT =

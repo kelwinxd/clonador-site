@@ -21,13 +21,21 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
 - [x] **Etapa 5** — assets dentro do CSS (`css-assets.ts` + `asset-pipeline.ts`): segue `url()` e
       `@import` em cadeia, baixa fontes e fundos, e reescreve cada `.css` para caminhos locais.
       *Pronto: teste confirma o zip sem nenhuma referência local quebrada (sem 404).*
-- [ ] **Etapa 6** — fila com BullMQ + Redis. `POST /clone` passa a devolver `{ jobId }`, o zip sai
-      num endpoint de download e o resultado tem prazo de validade.
-      *Pronto: 10 clones ao mesmo tempo nunca abrem mais que N navegadores.*
-- [ ] **Etapa 7** — progresso por WebSocket, uma sala por job.
-- [x] **Etapa 8** — interface: formulário, barra de progresso, prévia em iframe, download e
+- [x] **Etapa 6** — fila com BullMQ + Redis. `POST /clone` devolve `{ id }`; `GET /clone/:id` dá
+      estado + progresso; `GET /clone/:id/download` entrega o zip. O worker (`clone.worker.ts`)
+      guarda o zip no disco temporário (`result-store.ts`) com validade e limpeza automática; o
+      erro sai com código traduzido. *Pronto: teste confirma 10 clones ao mesmo tempo com um
+      navegador só.* **Desvio do plano:** uma fila só, não duas. O teto de navegadores já é
+      garantido pelo `BrowserService`; a concorrência da fila fica acima dele para o fetch não
+      ficar preso atrás do render. Separar em duas filas fica para quando a fome de fetch aparecer
+      de verdade. **`@nestjs/bullmq` foi descartado** (é ESM puro e não roda no projeto CommonJS);
+      usamos `bullmq` direto, com a fila e o worker como providers do Nest.
+- [ ] **Etapa 7** — progresso por WebSocket, uma sala por job. (O front já mostra o progresso por
+      polling; a Etapa 7 troca só o meio.)
+- [x] **Etapa 8** — interface: formulário, progresso por estágio, prévia em iframe, download e
       mensagem certa para cada erro. A prévia abre o zip no próprio navegador (JSZip), sem
-      depender de armazenamento no servidor; a barra é indeterminada até a Etapa 7.
+      depender de armazenamento no servidor. Ajustada na Etapa 6 para o fluxo assíncrono
+      (enfileira → acompanha → baixa).
 - [ ] **Etapa 9** — deploy: Dockerfile com imagem do Playwright, Railway, Redis, limite de
       requisições e health check. Aqui entra também a correção do DNS rebinding (fixar o IP já
       verificado na conexão).

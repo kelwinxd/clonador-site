@@ -57,7 +57,7 @@ cd back-clonador && npm run fixtures
 
 Ficam em `http://localhost:4173/ssr.html`, `/spa.html` e `/lazy.html`.
 
-Redis (só a partir da Etapa 6):
+Redis (necessário para a fila, a partir da Etapa 6):
 
 ```bash
 docker compose up -d
@@ -72,13 +72,30 @@ para acessar a sua rede por dentro.
 
 ## Usando a API
 
+A API é assíncrona: você enfileira o clone, acompanha o estado e baixa o zip quando fica pronto.
+
+1. Enfileirar (devolve `{ "id": "..." }`):
+
 ```bash
-curl -X POST http://localhost:3000/clone -H "Content-Type: application/json" -d '{"url":"https://exemplo.com/oferta","acceptedTerms":true,"links":[{"from":"pay.hotmart.com/B12345678X","to":"https://go.hotmart.com/SEU-ID"}]}' -o clone.zip
+curl -X POST http://localhost:3000/clone -H "Content-Type: application/json" -d '{"url":"https://exemplo.com/oferta","acceptedTerms":true,"links":[{"from":"pay.hotmart.com/B12345678X","to":"https://go.hotmart.com/SEU-ID"}]}'
 ```
 
-A resposta é o zip (`index.html`, `assets/` e `clone-info.json`). O resumo do clone também vem no
-cabeçalho `X-Clone-Meta`. Isso muda na Etapa 6: a API passa a devolver `{ jobId }` e o download
-ganha endpoint próprio.
+2. Acompanhar o estado e o progresso:
+
+```bash
+curl http://localhost:3000/clone/SEU_ID
+```
+
+Devolve `state` (`waiting`, `active`, `completed`, `failed`), `progress` (o estágio atual) e, no
+fim, `result` com o resumo — ou `error` com o código traduzido.
+
+3. Baixar o zip (`index.html`, `assets/` e `clone-info.json`), quando `completed`:
+
+```bash
+curl http://localhost:3000/clone/SEU_ID/download -o clone.zip
+```
+
+O zip fica disponível por um tempo (`RESULT_TTL_MS`, padrão 30 min) e depois é apagado.
 
 ## Termo de uso
 

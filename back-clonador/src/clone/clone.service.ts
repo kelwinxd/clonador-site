@@ -6,6 +6,7 @@ import { fetchPage } from './engine/fetcher';
 import { CheerioDoc, collectAssets, parseHtml, rewriteAssets } from './engine/html-rewriter';
 import { LinkRule, replaceLinks } from './engine/link-replacer';
 import { PageMode, PageSource } from './engine/page-source';
+import { ProgressReporter } from './clone.types';
 import { buildZip } from './engine/packager';
 import { needsRender } from './engine/render-detector';
 import { renderPage } from './engine/renderer';
@@ -61,11 +62,12 @@ export class CloneService {
 
   constructor(private readonly browser: BrowserService) {}
 
-  async clone(input: CloneInput): Promise<CloneResult> {
+  async clone(input: CloneInput, onProgress: ProgressReporter = () => {}): Promise<CloneResult> {
     const startedAt = Date.now();
 
     // 1. Pega o HTML: fetch primeiro, navegador só se precisar.
-    const { source, $, renderRecommended, reason } = await this.obtainPage(input);
+    onProgress({ stage: 'fetching' });
+    const { source, $, renderRecommended, reason } = await this.obtainPage(input, onProgress);
     this.logger.log(`${source.mode}: ${source.finalUrl} — ${reason}`);
 
     // 2. Página renderizada sai sem os scripts do framework (senão monta duas vezes).
@@ -73,7 +75,11 @@ export class CloneService {
 
     // 3. Lista e baixa os arquivos (inclusive o que os .css carregam por dentro).
     const assetUrls = collectAssets($, source.finalUrl);
-    const download = await downloadPageAssets(assetUrls, { referer: source.finalUrl });
+    onProgress({ stage: 'downloading', done: 0, total: assetUrls.length });
+    const download = await downloadPageAssets(assetUrls, {
+      referer: source.finalUrl,
+      onProgress: (done, total) => onProgress({ stage: 'downloading', done, total }),
+    });
 
     // 4. Aponta o HTML para os arquivos locais.
     rewriteAssets($, source.finalUrl, download.map);
@@ -97,6 +103,7 @@ export class CloneService {
     };
 
     // 6. Zip com o index, os assets e um resumo do que foi feito.
+    onProgress({ stage: 'packaging' });
     const zip = await buildZip([
       { path: 'index.html', content: $.html() },
       ...download.assets.map((asset) => ({ path: asset.path, content: asset.body })),
@@ -117,8 +124,9 @@ export class CloneService {
    * 3. fetch ok mas HTML vazio (detector) -> navegador;
    * 4. fetch ok e HTML pronto -> segue sem navegador.
    */
-  private async obtainPage(input: CloneInput): Promise<ObtainedPage> {
+  private async obtainPage(input: CloneInput, onProgress: ProgressReporter): Promise<ObtainedPage> {
     if (input.forceRender) {
+      onProgress({ stage: 'rendering' });
       return this.rendered(input.url, 'renderização forçada pelo usuário');
     }
 
@@ -131,6 +139,7 @@ export class CloneService {
         error.httpStatus !== undefined &&
         RETRY_WITH_BROWSER_STATUS.has(error.httpStatus)
       ) {
+        onProgress({ stage: 'rendering' });
         return this.rendered(input.url, `fetch recusado (${error.httpStatus}), aberto no navegador`);
       }
       throw error;
@@ -142,6 +151,8 @@ export class CloneService {
     if (!decision.render) {
       return { source: fetched, $, renderRecommended: false, reason: decision.reason };
     }
+
+    onProgress({ stage: 'rendering' });
 
     return this.rendered(fetched.finalUrl, `${decision.reason}, aberto no navegador`);
   }

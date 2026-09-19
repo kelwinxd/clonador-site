@@ -1,10 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
-import { ApiError, baixarArquivo, cloneSite } from './api';
+import { ApiError, baixarArquivo, cloneSite, type CloneProgress } from './api';
 import { montarPreview, type Preview } from './preview';
 import type { CloneResult, LinkRule } from './types';
 
 type Status = 'parado' | 'clonando' | 'pronto' | 'erro';
+
+const TEXTO_ESTAGIO: Record<CloneProgress['stage'], string> = {
+  fetching: 'Buscando a página…',
+  rendering: 'Abrindo no navegador (a página depende de JavaScript)…',
+  downloading: 'Baixando os arquivos…',
+  packaging: 'Montando o .zip…',
+};
+
+function descreveProgresso(progresso: CloneProgress | null): string {
+  if (!progresso) return 'Entrando na fila…';
+  const base = TEXTO_ESTAGIO[progresso.stage];
+  if (progresso.stage === 'downloading' && progresso.total) {
+    return `Baixando os arquivos… ${progresso.done ?? 0}/${progresso.total}`;
+  }
+  return base;
+}
 
 export default function App() {
   const [url, setUrl] = useState('http://localhost:4173/ssr.html');
@@ -14,6 +30,7 @@ export default function App() {
   const [resultado, setResultado] = useState<CloneResult | null>(null);
   const [erro, setErro] = useState<{ mensagem: string; detalhe?: string } | null>(null);
   const [previa, setPrevia] = useState<Preview | null>(null);
+  const [progresso, setProgresso] = useState<CloneProgress | null>(null);
   const previaAnterior = useRef<Preview | null>(null);
 
   // Os endereços temporários da prévia precisam ser liberados quando trocam ou ao sair.
@@ -29,13 +46,17 @@ export default function App() {
     setErro(null);
     setResultado(null);
     setPrevia(null);
+    setProgresso(null);
 
     try {
-      const clone = await cloneSite({
-        url: url.trim(),
-        acceptedTerms: termos,
-        links: links.filter((link) => link.from.trim() && link.to.trim()),
-      });
+      const clone = await cloneSite(
+        {
+          url: url.trim(),
+          acceptedTerms: termos,
+          links: links.filter((link) => link.from.trim() && link.to.trim()),
+        },
+        setProgresso,
+      );
       setResultado(clone);
       setPrevia(await montarPreview(clone.blob));
       setStatus('pronto');
@@ -140,7 +161,7 @@ export default function App() {
         {clonando && (
           <div className="progresso" role="status">
             <div className="barra" />
-            <span>Buscando a página, baixando arquivos e montando o zip…</span>
+            <span>{descreveProgresso(progresso)}</span>
           </div>
         )}
       </form>
