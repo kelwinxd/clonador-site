@@ -1,3 +1,4 @@
+import { io, type Socket } from 'socket.io-client';
 import type { CloneErrorCode, CloneMeta, CloneResult, LinkRule } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -65,19 +66,39 @@ function erroDoCorpo(corpo: Record<string, unknown> | null, status: number): Api
 }
 
 /**
- * Etapa 6: a API é assíncrona. Aqui a gente enfileira o job, acompanha o progresso
- * por polling e, quando termina, baixa o zip. O WebSocket da Etapa 7 troca só o meio
- * (o acompanhamento), não as pontas.
+ * A API é assíncrona: enfileira o job, acompanha o progresso (por WebSocket, com polling
+ * de reserva) e, quando termina, baixa o zip.
  */
 export async function cloneSite(
   params: CloneParams,
   onProgress?: (progress: CloneProgress) => void,
 ): Promise<CloneResult> {
   const id = await enfileirar(params);
-  const status = await acompanhar(id, onProgress);
+  const info = await acompanhar(id, onProgress);
   const blob = await baixarZip(id);
 
-  return { meta: status.result!.meta, blob, fileName: status.result!.fileName };
+  return { meta: info.meta, blob, fileName: info.fileName };
+}
+
+interface ResultadoInfo {
+  fileName: string;
+  meta: CloneMeta;
+}
+
+/**
+ * Acompanha o job por WebSocket. Se o socket não conectar (rede, proxy, servidor sem
+ * gateway), cai no polling — as pontas (enfileirar e baixar) não mudam.
+ */
+async function acompanhar(
+  id: string,
+  onProgress?: (progress: CloneProgress) => void,
+): Promise<ResultadoInfo> {
+  try {
+    return await acompanharPorWebSocket(id, onProgress);
+  } catch (problema) {
+    if (problema instanceof ApiError) throw problema; // job falhou de verdade
+    return acompanharPorPolling(id, onProgress); // socket indisponível
+  }
 }
 
 async function enfileirar(params: CloneParams): Promise<string> {
@@ -97,11 +118,46 @@ async function enfileirar(params: CloneParams): Promise<string> {
   return corpo.id;
 }
 
-/** Pergunta o estado do job até terminar (ou falhar). */
-async function acompanhar(
+/** Sentinela: o socket não conectou; o chamador cai para o polling. */
+class WsIndisponivel extends Error {}
+
+function erroDeCodigo(code: string | undefined, message?: string): ApiError {
+  const c = (code ?? 'FETCH_FAILED') as CloneErrorCode;
+  return new ApiError(c in MENSAGEM_POR_CODIGO ? c : 'FETCH_FAILED', message);
+}
+
+/** Abre o socket, entra na sala do job e resolve no evento `done`. */
+function acompanharPorWebSocket(
   id: string,
   onProgress?: (progress: CloneProgress) => void,
-): Promise<StatusResponse> {
+): Promise<ResultadoInfo> {
+  return new Promise<ResultadoInfo>((resolve, reject) => {
+    const socket: Socket = io(API_URL, { transports: ['websocket'], timeout: 4000 });
+    const encerrar = () => socket.disconnect();
+
+    socket.on('connect', () => socket.emit('subscribe', id));
+    socket.on('connect_error', () => {
+      encerrar();
+      reject(new WsIndisponivel());
+    });
+
+    socket.on('progress', (progress: CloneProgress) => onProgress?.(progress));
+    socket.on('done', (result: ResultadoInfo) => {
+      encerrar();
+      resolve(result);
+    });
+    socket.on('failed', (erro: { code?: string; message?: string }) => {
+      encerrar();
+      reject(erroDeCodigo(erro.code, erro.message));
+    });
+  });
+}
+
+/** Reserva: pergunta o estado do job de tempo em tempo até terminar (ou falhar). */
+async function acompanharPorPolling(
+  id: string,
+  onProgress?: (progress: CloneProgress) => void,
+): Promise<ResultadoInfo> {
   const intervaloMs = 700;
   const limite = Date.now() + 5 * 60_000;
 
@@ -117,11 +173,8 @@ async function acompanhar(
     const status = (await lerJson(response)) as unknown as StatusResponse;
     if (status.progress) onProgress?.(status.progress);
 
-    if (status.state === 'completed' && status.result) return status;
-    if (status.state === 'failed') {
-      const code = (status.error?.code ?? 'FETCH_FAILED') as CloneErrorCode;
-      throw new ApiError(code in MENSAGEM_POR_CODIGO ? code : 'FETCH_FAILED', status.error?.message);
-    }
+    if (status.state === 'completed' && status.result) return status.result;
+    if (status.state === 'failed') throw erroDeCodigo(status.error?.code, status.error?.message);
 
     await new Promise((r) => setTimeout(r, intervaloMs));
   }

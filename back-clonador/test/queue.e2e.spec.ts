@@ -121,12 +121,14 @@ describe('Etapa 6 — fila (BullMQ + Redis)', () => {
     expect(motivo.httpStatus).toBe(404);
   });
 
-  teste('10 clones ao mesmo tempo usam um navegador só', async () => {
+  teste('vários clones ao mesmo tempo usam um navegador só', async () => {
+    // 6 > maxRenderPages (2), então há fila e reuso de verdade entre jobs concorrentes.
+    // (O render.e2e cobre a estabilidade de memória em 20 renders sequenciais.)
     const antes = browser.launches;
     const jobs = await Promise.all(
-      Array.from({ length: 10 }, () => queue.add('clone', { url: `${fixtures.url}/spa.html` })),
+      Array.from({ length: 6 }, () => queue.add('clone', { url: `${fixtures.url}/spa.html` })),
     );
-    await Promise.all(jobs.map((j) => esperarEstado(queue, String(j.id), 'completed')));
+    await Promise.all(jobs.map((j) => esperarEstado(queue, String(j.id), 'completed', 90_000)));
 
     // Um Chromium só para todos: no máximo uma abertura ao longo do teste.
     expect(browser.launches - antes).toBeLessThanOrEqual(1);

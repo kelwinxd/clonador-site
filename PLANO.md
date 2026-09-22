@@ -30,8 +30,11 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       ficar preso atrás do render. Separar em duas filas fica para quando a fome de fetch aparecer
       de verdade. **`@nestjs/bullmq` foi descartado** (é ESM puro e não roda no projeto CommonJS);
       usamos `bullmq` direto, com a fila e o worker como providers do Nest.
-- [ ] **Etapa 7** — progresso por WebSocket, uma sala por job. (O front já mostra o progresso por
-      polling; a Etapa 7 troca só o meio.)
+- [x] **Etapa 7** — progresso por WebSocket, uma sala por job (`clone.gateway.ts`). O gateway ouve
+      o `QueueEvents` do BullMQ (via Redis) e reemite `progress`/`done`/`failed` para a sala do
+      `jobId`, então funciona mesmo com o worker em outro processo (Etapa 18). Quem conecta tarde
+      recebe o estado atual na entrada. O front usa WebSocket com o polling de reserva se o socket
+      não conectar. *Pronto: teste recebe progresso e resultado por socket, e o "conectar tarde".*
 - [x] **Etapa 8** — interface: formulário, progresso por estágio, prévia em iframe, download e
       mensagem certa para cada erro. A prévia abre o zip no próprio navegador (JSZip), sem
       depender de armazenamento no servidor. Ajustada na Etapa 6 para o fluxo assíncrono
