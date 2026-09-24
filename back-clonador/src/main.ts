@@ -1,3 +1,4 @@
+import 'dotenv/config'; // carrega o .env antes de qualquer coisa ler process.env
 import 'reflect-metadata';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
