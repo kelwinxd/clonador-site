@@ -8,18 +8,38 @@ type Status = 'parado' | 'clonando' | 'pronto' | 'erro';
 type Dispositivo = 'desktop' | 'mobile';
 
 const TEXTO_ESTAGIO: Record<CloneProgress['stage'], string> = {
-  fetching: 'Buscando a página…',
-  rendering: 'Abrindo no navegador (a página depende de JavaScript)…',
-  downloading: 'Baixando os arquivos…',
-  packaging: 'Montando o .zip…',
+  fetching: 'Rastreando o alvo…',
+  rendering: 'Revelando a página escondida…',
+  downloading: 'Recolhendo os arquivos…',
+  packaging: 'Selando o clone…',
 };
 
 function descreveProgresso(progresso: CloneProgress | null): string {
-  if (!progresso) return 'Entrando na fila…';
+  if (!progresso) return 'Preparando a missão…';
   if (progresso.stage === 'downloading' && progresso.total) {
-    return `Baixando os arquivos… ${progresso.done ?? 0}/${progresso.total}`;
+    return `Recolhendo os arquivos… ${progresso.done ?? 0}/${progresso.total}`;
   }
   return TEXTO_ESTAGIO[progresso.stage];
+}
+
+/**
+ * Porcentagem da barra (enche da esquerda). O download é a parte medível; as outras etapas
+ * ganham marcos fixos para a barra andar para frente. null = indeterminada (fila).
+ */
+function porcentagem(progresso: CloneProgress | null): number | null {
+  if (!progresso) return null;
+  switch (progresso.stage) {
+    case 'fetching':
+      return 8;
+    case 'rendering':
+      return 18;
+    case 'downloading':
+      return progresso.total
+        ? 20 + Math.round(((progresso.done ?? 0) / progresso.total) * 70)
+        : 20;
+    case 'packaging':
+      return 96;
+  }
 }
 
 export default function App() {
@@ -97,6 +117,26 @@ export default function App() {
 
   return (
     <div className="app">
+      {clonando && (
+        <div className="overlay" role="status" aria-live="polite">
+          <div className="overlay-conteudo">
+            <span className="overlay-logo">
+              <img src="/logo.png" alt="Clonando" />
+            </span>
+            <div className="overlay-feedback">
+              <div className="barra">
+                {porcentagem(progresso) == null ? (
+                  <div className="barra-fill indeterminada" />
+                ) : (
+                  <div className="barra-fill" style={{ width: `${porcentagem(progresso)}%` }} />
+                )}
+              </div>
+              <span>{descreveProgresso(progresso)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="topbar">
         <div className="brand">
           <span className="logo">
@@ -133,9 +173,6 @@ export default function App() {
           </label>
 
           <SecaoTitulo numero={2} titulo="Links" />
-          <p className="ajuda">
-            Esquerda: um trecho do link de compra da página. Direita: o seu link de afiliado.
-          </p>
 
           {links.map((link, indice) => (
             <div className="linha-link" key={indice}>
@@ -170,7 +207,7 @@ export default function App() {
             className="botao-ghost"
             onClick={() => setLinks((a) => [...a, { from: '', to: '' }])}
           >
-            + adicionar link
+            + Link
           </button>
 
           <label className="termo">
@@ -180,22 +217,12 @@ export default function App() {
               onChange={(e) => setTermos(e.target.checked)}
               required
             />
-            <span>
-              Declaro que tenho autorização para clonar esta página. A ferramenta não serve para
-              copiar página de terceiro nem para phishing.
-            </span>
+            <span>Declaro que tenho autorização para clonar esta página.</span>
           </label>
 
           <button type="submit" className="cta" disabled={clonando || !termos}>
             {clonando ? 'CLONANDO…' : 'CLONAR PÁGINA'}
           </button>
-
-          {clonando && (
-            <div className="progresso" role="status">
-              <div className="barra" />
-              <span>{descreveProgresso(progresso)}</span>
-            </div>
-          )}
 
           {erro && (
             <div className="erro" role="alert">
@@ -232,7 +259,7 @@ export default function App() {
             {resultado ? (
               <div className="preview-acoes">
                 <button type="button" className="botao-preview ghost" onClick={abrirEmNovaAba}>
-                  <IconeAbrir /> Abrir
+                  <IconeOlho /> Preview
                 </button>
                 <button
                   type="button"
@@ -372,14 +399,6 @@ function formatarTamanho(bytes: number): string {
 }
 
 /* ---------- Ícones (inline, sem dependência) ---------- */
-
-function IconeAbrir() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M14 4h6v6M20 4l-8 8M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6" />
-    </svg>
-  );
-}
 
 function IconeDesktop() {
   return (
