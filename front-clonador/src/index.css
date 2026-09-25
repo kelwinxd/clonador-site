@@ -1,33 +1,25 @@
 :root {
-  --fundo: #f6f7f5;
-  --superficie: #ffffff;
-  --borda: #dfe3dd;
-  --texto: #1b2a22;
-  --texto-suave: #5c6b62;
-  --destaque: #2d6a4f;
-  --destaque-forte: #1b4332;
-  --erro: #9b2226;
-  --aviso: #8a5a00;
-  --aviso-fundo: #fff6e0;
+  /* Tema CLONE NINJA — dark slate + laranja */
+  --bg: #0e1520;
+  --bg-2: #0a0f18;
+  --panel: #1a2432;
+  --panel-2: #131c28;
+  --inner: #0f1824;
+  --border: #2a3644;
+  --border-soft: #212d3a;
+  --text: #e7edf3;
+  --text-muted: #8695a6;
+  --text-dim: #5f6d7e;
+  --orange: #f97316;
+  --orange-hi: #fb8c3c;
+  --orange-lo: #ea580c;
+  --orange-glow: rgba(249, 115, 22, 0.35);
+  --teal: #0d9488;
+  --erro: #f87171;
 
-  color-scheme: light dark;
+  color-scheme: dark;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fundo: #10150f;
-    --superficie: #171d16;
-    --borda: #2b342a;
-    --texto: #e8efe6;
-    --texto-suave: #9bab9f;
-    --destaque: #52b788;
-    --destaque-forte: #74c69d;
-    --erro: #ff8a8a;
-    --aviso: #f0c674;
-    --aviso-fundo: #2a2208;
-  }
 }
 
 * {
@@ -36,8 +28,9 @@
 
 body {
   margin: 0;
-  background: var(--fundo);
-  color: var(--texto);
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
 }
 
 h1,

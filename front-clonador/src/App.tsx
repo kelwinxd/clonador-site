@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import { ApiError, baixarArquivo, cloneSite, type CloneProgress } from './api';
-import { montarPreview, type Preview } from './preview';
+import { montarHtmlAutonomo, montarPreview, type Preview } from './preview';
 import type { CloneResult, LinkRule } from './types';
 
 type Status = 'parado' | 'clonando' | 'pronto' | 'erro';
+type Dispositivo = 'desktop' | 'mobile';
 
 const TEXTO_ESTAGIO: Record<CloneProgress['stage'], string> = {
   fetching: 'Buscando a página…',
@@ -15,11 +16,10 @@ const TEXTO_ESTAGIO: Record<CloneProgress['stage'], string> = {
 
 function descreveProgresso(progresso: CloneProgress | null): string {
   if (!progresso) return 'Entrando na fila…';
-  const base = TEXTO_ESTAGIO[progresso.stage];
   if (progresso.stage === 'downloading' && progresso.total) {
     return `Baixando os arquivos… ${progresso.done ?? 0}/${progresso.total}`;
   }
-  return base;
+  return TEXTO_ESTAGIO[progresso.stage];
 }
 
 export default function App() {
@@ -31,6 +31,7 @@ export default function App() {
   const [erro, setErro] = useState<{ mensagem: string; detalhe?: string } | null>(null);
   const [previa, setPrevia] = useState<Preview | null>(null);
   const [progresso, setProgresso] = useState<CloneProgress | null>(null);
+  const [dispositivo, setDispositivo] = useState<Dispositivo>('desktop');
   const previaAnterior = useRef<Preview | null>(null);
 
   // Os endereços temporários da prévia precisam ser liberados quando trocam ou ao sair.
@@ -76,40 +77,72 @@ export default function App() {
     );
   }
 
+  // Abre o clone inteiro numa aba nova, como um site de verdade (sem baixar).
+  // Gera um HTML autossuficiente (tudo embutido) a partir do zip, para funcionar numa
+  // aba de origem opaca — que não acessaria os endereços temporários da prévia.
+  async function abrirEmNovaAba() {
+    if (!resultado) return;
+    const html = await montarHtmlAutonomo(resultado.blob);
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.click();
+    // Não revoga na hora: a aba nova ainda precisa do endereço.
+  }
+
   const clonando = status === 'clonando';
+  const urlExibida = resultado?.meta.finalUrl ?? url;
 
   return (
-    <div className="pagina">
-      <header className="cabecalho">
-        <h1>Clonador de páginas</h1>
-        <p>Clone uma página autorizada e baixe um .zip pronto para hospedar, com o seu link no lugar.</p>
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <span className="logo">
+            <img src="/logo.png" alt="" width="60" height="60" />
+          </span>
+          <span className="brand-nome">
+            CLONE <span className="brand-ninja">NINJA</span>
+          </span>
+        </div>
+        <div className="avatar" aria-hidden="true">
+          U
+        </div>
       </header>
 
-      <form className="cartao" onSubmit={enviar}>
-        <label className="campo">
-          <span className="rotulo">Endereço da página</span>
-          <input
-            type="url"
-            value={url}
-            onChange={(evento) => setUrl(evento.target.value)}
-            placeholder="https://pagina-do-produtor.com/oferta"
-            required
-          />
-        </label>
+      <p className="tagline">
+        Clone uma página autorizada e baixe um <strong>.zip</strong> pronto para hospedar, com o seu
+        link no lugar.
+      </p>
 
-        <fieldset className="campo">
-          <legend className="rotulo">Links para trocar</legend>
+      <div className="grid">
+        {/* ---------- Coluna esquerda: configuração ---------- */}
+        <form className="painel" onSubmit={enviar}>
+          <SecaoTitulo numero={1} titulo="Configurar clone" />
+
+          <label className="campo">
+            <span className="rotulo">Endereço da página</span>
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://pagina-do-produtor.com/oferta"
+              required
+            />
+          </label>
+
+          <SecaoTitulo numero={2} titulo="Links" />
           <p className="ajuda">
-            À esquerda, um trecho do link de compra que está na página. À direita, o seu link de
-            afiliado. A detecção automática de checkout chega na Etapa 11.
+            Esquerda: um trecho do link de compra da página. Direita: o seu link de afiliado.
           </p>
 
           {links.map((link, indice) => (
             <div className="linha-link" key={indice}>
               <input
                 value={link.from}
-                onChange={(evento) => atualizarLink(indice, 'from', evento.target.value)}
-                placeholder="pay.hotmart.com/B12345678X"
+                onChange={(e) => atualizarLink(indice, 'from', e.target.value)}
+                placeholder="pay.hotmart.com/B123…"
               />
               <span className="seta" aria-hidden="true">
                 →
@@ -117,14 +150,14 @@ export default function App() {
               <input
                 type="url"
                 value={link.to}
-                onChange={(evento) => atualizarLink(indice, 'to', evento.target.value)}
-                placeholder="https://go.hotmart.com/SEU-ID"
+                onChange={(e) => atualizarLink(indice, 'to', e.target.value)}
+                placeholder="https://go.hotmart.com/…"
               />
               <button
                 type="button"
                 className="botao-icone"
                 aria-label={`Remover troca ${indice + 1}`}
-                onClick={() => setLinks((atual) => atual.filter((_, posicao) => posicao !== indice))}
+                onClick={() => setLinks((a) => a.filter((_, p) => p !== indice))}
                 disabled={links.length === 1}
               >
                 ×
@@ -134,56 +167,133 @@ export default function App() {
 
           <button
             type="button"
-            className="botao-secundario"
-            onClick={() => setLinks((atual) => [...atual, { from: '', to: '' }])}
+            className="botao-ghost"
+            onClick={() => setLinks((a) => [...a, { from: '', to: '' }])}
           >
-            + adicionar troca
+            + adicionar link
           </button>
-        </fieldset>
 
-        <label className="termo">
-          <input
-            type="checkbox"
-            checked={termos}
-            onChange={(evento) => setTermos(evento.target.checked)}
-            required
-          />
-          <span>
-            Declaro que tenho autorização para clonar esta página. A ferramenta não serve para
-            copiar página de terceiro sem permissão nem para phishing.
-          </span>
-        </label>
+          <label className="termo">
+            <input
+              type="checkbox"
+              checked={termos}
+              onChange={(e) => setTermos(e.target.checked)}
+              required
+            />
+            <span>
+              Declaro que tenho autorização para clonar esta página. A ferramenta não serve para
+              copiar página de terceiro nem para phishing.
+            </span>
+          </label>
 
-        <button type="submit" className="botao-principal" disabled={clonando || !termos}>
-          {clonando ? 'Clonando…' : 'Clonar página'}
-        </button>
+          <button type="submit" className="cta" disabled={clonando || !termos}>
+            {clonando ? 'CLONANDO…' : 'CLONAR PÁGINA'}
+          </button>
 
-        {clonando && (
-          <div className="progresso" role="status">
-            <div className="barra" />
-            <span>{descreveProgresso(progresso)}</span>
+          {clonando && (
+            <div className="progresso" role="status">
+              <div className="barra" />
+              <span>{descreveProgresso(progresso)}</span>
+            </div>
+          )}
+
+          {erro && (
+            <div className="erro" role="alert">
+              <strong>{erro.mensagem}</strong>
+              {erro.detalhe && <p className="detalhe">{erro.detalhe}</p>}
+            </div>
+          )}
+        </form>
+
+        {/* ---------- Coluna direita: prévia ---------- */}
+        <div className="painel preview-painel">
+          <div className="preview-toolbar">
+            <div className="device-toggle" role="group" aria-label="Tamanho da prévia">
+              <button
+                type="button"
+                className={dispositivo === 'desktop' ? 'ativo' : ''}
+                onClick={() => setDispositivo('desktop')}
+                aria-label="Desktop"
+                aria-pressed={dispositivo === 'desktop'}
+              >
+                <IconeDesktop />
+              </button>
+              <button
+                type="button"
+                className={dispositivo === 'mobile' ? 'ativo' : ''}
+                onClick={() => setDispositivo('mobile')}
+                aria-label="Celular"
+                aria-pressed={dispositivo === 'mobile'}
+              >
+                <IconeCelular />
+              </button>
+            </div>
+
+            {resultado ? (
+              <div className="preview-acoes">
+                <button type="button" className="botao-preview ghost" onClick={abrirEmNovaAba}>
+                  <IconeAbrir /> Abrir
+                </button>
+                <button
+                  type="button"
+                  className="botao-preview pronto"
+                  onClick={() => baixarArquivo(resultado.blob, resultado.fileName)}
+                >
+                  <IconeDownload /> Baixar .zip
+                </button>
+              </div>
+            ) : (
+              <span className="botao-preview desativado">
+                <IconeOlho /> Ver preview
+              </span>
+            )}
           </div>
-        )}
-      </form>
 
-      {erro && (
-        <div className="cartao erro" role="alert">
-          <strong>{erro.mensagem}</strong>
-          {erro.detalhe && <p className="detalhe">{erro.detalhe}</p>}
+          <div className={`browser-mock ${dispositivo}`}>
+            <div className="chrome">
+              <span className="dot laranja" />
+              <span className="dot" />
+              <span className="dot" />
+              <div className="url-pill">{urlExibida}</div>
+            </div>
+            <div className="viewport">
+              {previa ? (
+                <iframe
+                  className="previa-frame"
+                  title="Prévia do clone"
+                  sandbox="allow-same-origin"
+                  srcDoc={previa.html}
+                />
+              ) : (
+                <PlaceholderPreview clonando={clonando} />
+              )}
+            </div>
+          </div>
+
+          {resultado && <Resultado clone={resultado} />}
         </div>
-      )}
+      </div>
+    </div>
+  );
+}
 
-      {resultado && <Resultado clone={resultado} />}
+function SecaoTitulo({ numero, titulo }: { numero: number; titulo: string }) {
+  return (
+    <div className="secao-titulo">
+      <span className="badge">{numero}</span>
+      <span>{titulo}</span>
+    </div>
+  );
+}
 
-      {previa && (
-        <section className="cartao">
-          <h2>Prévia</h2>
-          <p className="ajuda">
-            O zip é aberto aqui no navegador, sem passar pelo servidor. Os scripts ficam desligados.
-          </p>
-          <iframe className="previa" title="Prévia do clone" sandbox="allow-same-origin" srcDoc={previa.html} />
-        </section>
-      )}
+function PlaceholderPreview({ clonando }: { clonando: boolean }) {
+  return (
+    <div className="placeholder">
+      <div className="sk sk-l" />
+      <div className="sk sk-m" />
+      <div className="sk sk-s" />
+      <div className="sk-img">{clonando ? 'gerando prévia…' : 'conteúdo original da página'}</div>
+      <div className="sk-botao" />
     </div>
   );
 }
@@ -192,35 +302,28 @@ function Resultado({ clone }: { clone: CloneResult }) {
   const { meta } = clone;
 
   return (
-    <section className="cartao">
-      <div className="topo-resultado">
-        <h2>Clone pronto</h2>
-        <button className="botao-principal" onClick={() => baixarArquivo(clone.blob, clone.fileName)}>
-          Baixar {clone.fileName}
-        </button>
-      </div>
-
+    <div className="resultado">
       <ul className="numeros">
         <li>
           <strong>{meta.assets}</strong> {meta.assets === 1 ? 'arquivo' : 'arquivos'}
         </li>
         <li>
-          <strong>{formatarTamanho(meta.totalBytes)}</strong> baixados
+          <strong>{formatarTamanho(meta.totalBytes)}</strong>
         </li>
         <li>
           <strong>{meta.linksReplaced}</strong>{' '}
           {meta.linksReplaced === 1 ? 'link trocado' : 'links trocados'}
         </li>
         <li>
-          <strong>{meta.mode === 'fetch' ? 'sem navegador' : 'com navegador'}</strong> — {meta.reason}
+          <strong>{meta.mode === 'fetch' ? 'sem navegador' : 'com navegador'}</strong>
         </li>
       </ul>
 
       {meta.mode === 'render' && (
         <p className="aviso">
-          Esta página depende de JavaScript, então foi aberta num navegador e capturada já montada.
+          Página com JavaScript: aberta num navegador e capturada já montada.
           {meta.scriptsRemoved > 0 &&
-            ` ${meta.scriptsRemoved} ${meta.scriptsRemoved === 1 ? 'script foi removido' : 'scripts foram removidos'} para o clone não montar a página de novo por cima.`}
+            ` ${meta.scriptsRemoved} ${meta.scriptsRemoved === 1 ? 'script removido' : 'scripts removidos'} para não montar de novo por cima.`}
         </p>
       )}
 
@@ -248,7 +351,7 @@ function Resultado({ clone }: { clone: CloneResult }) {
               ? '1 link externo ficou como estava'
               : `${meta.remainingLinks.length} links externos ficaram como estavam`}
           </summary>
-          <p className="ajuda">Confira se algum deles é botão de compra apontando para o produtor.</p>
+          <p className="ajuda">Confira se algum é botão de compra apontando para o produtor.</p>
           <ul className="lista-simples">
             {meta.remainingLinks.map((link) => (
               <li key={link}>
@@ -258,7 +361,7 @@ function Resultado({ clone }: { clone: CloneResult }) {
           </ul>
         </details>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -266,4 +369,49 @@ function formatarTamanho(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/* ---------- Ícones (inline, sem dependência) ---------- */
+
+function IconeAbrir() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M14 4h6v6M20 4l-8 8M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6" />
+    </svg>
+  );
+}
+
+function IconeDesktop() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="4" width="18" height="12" rx="1.5" />
+      <path d="M9 20h6M12 16v4" />
+    </svg>
+  );
+}
+
+function IconeCelular() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="7" y="3" width="10" height="18" rx="2" />
+      <path d="M11 18h2" />
+    </svg>
+  );
+}
+
+function IconeOlho() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function IconeDownload() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16" />
+    </svg>
+  );
 }
