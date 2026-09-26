@@ -50,9 +50,11 @@ export default function App() {
   const [resultado, setResultado] = useState<CloneResult | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [previa, setPrevia] = useState<Preview | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progresso, setProgresso] = useState<CloneProgress | null>(null);
   const [dispositivo, setDispositivo] = useState<Dispositivo>('desktop');
   const previaAnterior = useRef<Preview | null>(null);
+  const previewUrlAnterior = useRef<string | null>(null);
 
   // Os endereços temporários da prévia precisam ser liberados quando trocam ou ao sair.
   useEffect(() => {
@@ -61,12 +63,21 @@ export default function App() {
     return () => previa?.descartar();
   }, [previa]);
 
+  // O endereço do "Preview em nova aba" também precisa ser liberado quando troca.
+  useEffect(() => {
+    if (previewUrlAnterior.current && previewUrlAnterior.current !== previewUrl) {
+      URL.revokeObjectURL(previewUrlAnterior.current);
+    }
+    previewUrlAnterior.current = previewUrl;
+  }, [previewUrl]);
+
   async function enviar(evento: React.FormEvent) {
     evento.preventDefault();
     setStatus('clonando');
     setErro(null);
     setResultado(null);
     setPrevia(null);
+    setPreviewUrl(null);
     setProgresso(null);
 
     try {
@@ -78,8 +89,15 @@ export default function App() {
         },
         setProgresso,
       );
+      // Prepara a prévia (iframe) e a página autossuficiente (Preview em nova aba) já aqui,
+      // para o botão Preview ser um link pronto — sem await no clique, que bloquearia o popup.
+      const [previaObj, htmlAutonomo] = await Promise.all([
+        montarPreview(clone.blob),
+        montarHtmlAutonomo(clone.blob),
+      ]);
       setResultado(clone);
-      setPrevia(await montarPreview(clone.blob));
+      setPrevia(previaObj);
+      setPreviewUrl(URL.createObjectURL(new Blob([htmlAutonomo], { type: 'text/html' })));
       setStatus('pronto');
     } catch (problema) {
       // Só a mensagem amigável na tela; o detalhe técnico do backend não é exibido.
@@ -93,21 +111,6 @@ export default function App() {
     setLinks((atual) =>
       atual.map((link, posicao) => (posicao === indice ? { ...link, [campo]: valor } : link)),
     );
-  }
-
-  // Abre o clone inteiro numa aba nova, como um site de verdade (sem baixar).
-  // Gera um HTML autossuficiente (tudo embutido) a partir do zip, para funcionar numa
-  // aba de origem opaca — que não acessaria os endereços temporários da prévia.
-  async function abrirEmNovaAba() {
-    if (!resultado) return;
-    const html = await montarHtmlAutonomo(resultado.blob);
-    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.click();
-    // Não revoga na hora: a aba nova ainda precisa do endereço.
   }
 
   const clonando = status === 'clonando';
@@ -255,9 +258,14 @@ export default function App() {
 
             {resultado ? (
               <div className="preview-acoes">
-                <button type="button" className="botao-preview ghost" onClick={abrirEmNovaAba}>
+                <a
+                  className="botao-preview ghost"
+                  href={previewUrl ?? undefined}
+                  target="_blank"
+                  rel="noopener"
+                >
                   <IconeOlho /> Preview
-                </button>
+                </a>
                 <button
                   type="button"
                   className="botao-preview pronto"
