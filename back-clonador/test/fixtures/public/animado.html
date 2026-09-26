@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Página com animação de entrada</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0 auto;
+        max-width: 720px;
+        padding: 24px;
+      }
+      /* Começa invisível; a "lib" (AOS) revelaria adicionando .aos-animate. */
+      [data-aos] {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      [data-aos].aos-animate {
+        opacity: 1;
+        transform: none;
+      }
+      /* Bloco de scroll-reveal genérico: começa invisível, nada o revela sem JS. */
+      .reveal {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Oferta com efeitos</h1>
+    <p>O cabeçalho é visível desde o início. As seções abaixo dependem de efeito de entrada.</p>
+
+    <!-- Caminho 1: biblioteca conhecida (AOS). O descongelamento adiciona .aos-animate. -->
+    <section data-aos="fade-up">
+      <h2>Bloco AOS</h2>
+      <p>Revelado pela classe que a lib usaria — sem JavaScript nenhum.</p>
+    </section>
+
+    <!-- Caminho 2: classe genérica de reveal. O descongelamento força opacity inline. -->
+    <section class="reveal">
+      <h2>Bloco reveal genérico</h2>
+      <p>Sem descongelar, este bloco sumiria do clone.</p>
+    </section>
+  </body>
+</html>

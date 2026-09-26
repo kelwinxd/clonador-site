@@ -39,6 +39,12 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       mensagem certa para cada erro. A prévia abre o zip no próprio navegador (JSZip), sem
       depender de armazenamento no servidor. Ajustada na Etapa 6 para o fluxo assíncrono
       (enfileira → acompanha → baixa).
+- [x] **Extra (motor)** — descongelar animações de entrada (`freeze-animations.ts`): antes da
+      captura, revela o conteúdo que ficaria preso em opacity:0 (AOS, WOW, scroll-reveal), para o
+      clone não sair com seções em branco. Sites com efeito de JavaScript (carrossel, fundo 3D)
+      continuam estáticos — isso é da natureza do clone-foto.
+- [x] **Extra (front)** — tela de login no estilo Clone Ninja, com validação de e-mail. Ainda sem
+      autenticação de verdade (qualquer e-mail válido entra); a lógica real fica para a Etapa 15.
 - [ ] **Etapa 9** — deploy: Dockerfile com imagem do Playwright, Railway, Redis, limite de
       requisições e health check. Aqui entra também a correção do DNS rebinding (fixar o IP já
       verificado na conexão).

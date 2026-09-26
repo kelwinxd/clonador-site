@@ -1,6 +1,7 @@
 import type { APIResponse, BrowserContext, Page, Route } from 'playwright';
 import { LIMITS } from '../../config';
 import { CloneError } from './errors';
+import { freezeAnimations } from './freeze-animations';
 import { PageSource } from './page-source';
 import { isTrackingHost } from './tracking';
 import { assertPublicHost, parseTargetUrl } from './url-guard';
@@ -97,6 +98,9 @@ export async function renderPage(
     await waitForQuiet(page);
     await scrollToBottom(page);
     await waitForQuiet(page);
+
+    // Revela o que ficaria preso em opacity:0 nas animações de entrada (sem os scripts).
+    await freezeAnimations(page);
 
     return { html: await page.content(), finalUrl: page.url(), mode: 'render' };
   } catch (error) {
