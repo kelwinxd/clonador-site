@@ -48,7 +48,7 @@ export default function App() {
   const [termos, setTermos] = useState(false);
   const [status, setStatus] = useState<Status>('parado');
   const [resultado, setResultado] = useState<CloneResult | null>(null);
-  const [erro, setErro] = useState<{ mensagem: string; detalhe?: string } | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const [previa, setPrevia] = useState<Preview | null>(null);
   const [progresso, setProgresso] = useState<CloneProgress | null>(null);
   const [dispositivo, setDispositivo] = useState<Dispositivo>('desktop');
@@ -82,11 +82,9 @@ export default function App() {
       setPrevia(await montarPreview(clone.blob));
       setStatus('pronto');
     } catch (problema) {
+      // Só a mensagem amigável na tela; o detalhe técnico do backend não é exibido.
       const apiError = problema instanceof ApiError ? problema : null;
-      setErro({
-        mensagem: apiError?.message ?? 'Algo deu errado ao clonar.',
-        detalhe: apiError?.detail,
-      });
+      setErro(apiError?.message ?? 'Algo deu errado ao clonar. Tente de novo.');
       setStatus('erro');
     }
   }
@@ -226,8 +224,7 @@ export default function App() {
 
           {erro && (
             <div className="erro" role="alert">
-              <strong>{erro.mensagem}</strong>
-              {erro.detalhe && <p className="detalhe">{erro.detalhe}</p>}
+              <strong>{erro}</strong>
             </div>
           )}
         </form>
