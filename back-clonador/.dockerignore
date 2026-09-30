@@ -1,0 +1,15 @@
+# node_modules local NÃO vai para a imagem: ele tem binários do Windows e os navegadores
+# em .local-browsers (feitos para Windows). O "npm ci" reconstrói tudo limpo no Linux.
+node_modules
+
+# Build e coisas de máquina/local.
+dist
+.env
+.env.*
+*.log
+npm-debug.log*
+
+# Git e apoio.
+.git
+.gitignore
+diag-playwright.js
