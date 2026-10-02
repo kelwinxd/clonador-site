@@ -4,7 +4,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import IORedis from 'ioredis';
 import { AppModule } from './app.module';
-import { REDIS_URL } from './config';
+import { REDIS_URL, corsOrigin } from './config';
 
 /**
  * A fila (Etapa 6) precisa do Redis. Sem essa checagem, um Redis fora do ar vira um
@@ -37,11 +37,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    // Em dev, o Vite pula para 5174, 5175... quando a porta anterior está ocupada.
-    // Por isso liberamos qualquer localhost quando CORS_ORIGIN não é definido.
-    origin: process.env.CORS_ORIGIN
-      ? process.env.CORS_ORIGIN.split(',')
-      : /^http:\/\/localhost:\d+$/,
+    origin: corsOrigin(),
     exposedHeaders: ['X-Clone-Meta', 'Content-Disposition'],
   });
 

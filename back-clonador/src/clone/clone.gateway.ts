@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Queue, QueueEvents } from 'bullmq';
 import type { Server, Socket } from 'socket.io';
-import { QUEUE } from '../config';
+import { QUEUE, corsOrigin } from '../config';
 import { CloneJobData, CloneProgress } from './clone.types';
 import { CloneJobResult, parseFailedReason } from './clone.worker';
 import { CLONE_QUEUE, redisConnection } from './queue.provider';
@@ -25,7 +25,7 @@ import { CLONE_QUEUE, redisConnection } from './queue.provider';
  * pode chegar depois de o job já ter andado, ao entrar mandamos o estado atual na hora.
  */
 @WebSocketGateway({
-  cors: { origin: (o, cb) => cb(null, !o || /^http:\/\/localhost:\d+$/.test(o)) },
+  cors: { origin: corsOrigin() },
 })
 export class CloneGateway implements OnGatewayInit, OnModuleDestroy {
   private readonly logger = new Logger(CloneGateway.name);

@@ -71,6 +71,17 @@ function resolveRedisUrl(): string {
 
 export const REDIS_URL = resolveRedisUrl();
 
+/**
+ * Origens liberadas no CORS (HTTP e WebSocket).
+ * Com CORS_ORIGIN definido (produção): só a lista. Sem ele (dev): qualquer localhost.
+ */
+export function corsOrigin(): string[] | RegExp {
+  const lista = process.env.CORS_ORIGIN?.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  return lista && lista.length ? lista : /^http:\/\/localhost:\d+$/;
+}
+
 /** User-Agent de navegador real: muitas páginas recusam clientes sem isso. */
 export const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
