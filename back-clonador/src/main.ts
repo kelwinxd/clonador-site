@@ -11,7 +11,12 @@ import { REDIS_URL } from './config';
  * stack trace cru do ioredis na largada. Aqui a mensagem diz o que fazer.
  */
 async function assertRedis(): Promise<void> {
-  const client = new IORedis(REDIS_URL, { maxRetriesPerRequest: 1, lazyConnect: true });
+  // family: 0 = IPv4/IPv6 (a rede interna do Railway é IPv6).
+  const client = new IORedis(REDIS_URL, {
+    maxRetriesPerRequest: 1,
+    lazyConnect: true,
+    family: 0,
+  });
   client.on('error', () => {}); // sem isso o ioredis imprime o erro cru antes da nossa mensagem
   try {
     await client.connect();
@@ -19,7 +24,7 @@ async function assertRedis(): Promise<void> {
   } catch {
     const logger = new Logger('Bootstrap');
     logger.error(`Não consegui falar com o Redis em ${REDIS_URL}.`);
-    logger.error('Suba o Redis antes do backend:  docker compose up -d');
+    logger.error('Redis fora do ar ou REDIS_URL errado. No Railway: adicione o Redis e aponte REDIS_URL para ${{Redis.REDIS_URL}}. Local: docker compose up -d');
     process.exit(1);
   } finally {
     client.disconnect();

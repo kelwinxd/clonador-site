@@ -17,6 +17,9 @@ export function redisConnection(): ConnectionOptions {
     username: url.username || undefined,
     password: url.password || undefined,
     maxRetriesPerRequest: null,
+    // A rede interna do Railway é IPv6; family: 0 aceita IPv4 e IPv6 (senão o ioredis
+    // só tenta IPv4 e a conexão falha mesmo com a URL certa).
+    family: 0,
   };
 }
 
