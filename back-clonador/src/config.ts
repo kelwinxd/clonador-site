@@ -48,8 +48,28 @@ export const QUEUE = {
   keepFailed: 200,
 } as const;
 
-/** URL do Redis. */
-export const REDIS_URL = process.env.REDIS_URL ?? 'redis://127.0.0.1:6379';
+/**
+ * URL do Redis.
+ * Ordem: REDIS_URL cheia -> monta a partir das peças (REDISHOST/PORT/USER/PASSWORD, que
+ * o Railway expõe) -> padrão local. Assim funciona de qualquer jeito que o provedor dê.
+ */
+function resolveRedisUrl(): string {
+  const direta = process.env.REDIS_URL?.trim();
+  if (direta) return direta;
+
+  const host = (process.env.REDISHOST ?? process.env.REDIS_HOST ?? '').trim();
+  if (host) {
+    const port = (process.env.REDISPORT ?? process.env.REDIS_PORT ?? '6379').trim();
+    const user = (process.env.REDISUSER ?? process.env.REDIS_USER ?? 'default').trim();
+    const pass = (process.env.REDISPASSWORD ?? process.env.REDIS_PASSWORD ?? '').trim();
+    const auth = pass ? `${encodeURIComponent(user)}:${encodeURIComponent(pass)}@` : '';
+    return `redis://${auth}${host}:${port}`;
+  }
+
+  return 'redis://127.0.0.1:6379';
+}
+
+export const REDIS_URL = resolveRedisUrl();
 
 /** User-Agent de navegador real: muitas páginas recusam clientes sem isso. */
 export const USER_AGENT =
