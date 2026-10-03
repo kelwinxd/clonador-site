@@ -43,7 +43,7 @@ function porcentagem(progresso: CloneProgress | null): number | null {
 }
 
 export default function App() {
-  const [url, setUrl] = useState('http://localhost:4173/ssr.html');
+  const [url, setUrl] = useState('');
   const [links, setLinks] = useState<LinkRule[]>([{ from: '', to: '' }]);
   const [termos, setTermos] = useState(false);
   const [status, setStatus] = useState<Status>('parado');
