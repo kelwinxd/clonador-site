@@ -34,4 +34,5 @@ export type CloneErrorCode =
   | 'TOO_LARGE'
   | 'FETCH_FAILED'
   | 'RENDER_FAILED'
+  | 'RATE_LIMIT'
   | 'NETWORK';

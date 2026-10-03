@@ -11,7 +11,9 @@ import {
   Post,
   Res,
   ServiceUnavailableException,
+  UseGuards,
 } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Queue } from 'bullmq';
 import type { Response } from 'express';
 import { QUEUE } from '../config';
@@ -56,6 +58,8 @@ export class CloneController {
     private readonly resultStore: ResultStore,
   ) {}
 
+  // Limite de taxa só aqui (o clone é o caro). Status e download ficam livres.
+  @UseGuards(ThrottlerGuard)
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   async enqueue(@Body() body: CloneRequestDto): Promise<{ id: string }> {

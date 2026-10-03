@@ -17,6 +17,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.2.5",
+    "@nestjs/throttler": "^6.7.1",
     "@nestjs/websockets": "^11.2.5",
     "archiver": "^7.0.1",
     "bullmq": "^6.3.8",

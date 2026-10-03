@@ -12,6 +12,7 @@ const MENSAGEM_POR_CODIGO: Record<CloneErrorCode, string> = {
   TOO_LARGE: 'A página passou do limite de tamanho permitido.',
   FETCH_FAILED: 'Não consegui acessar a página. Ela pode estar fora do ar ou bloqueando robôs.',
   RENDER_FAILED: 'Não consegui abrir a página no navegador interno.',
+  RATE_LIMIT: 'Você atingiu o limite de clones por agora. Tente de novo mais tarde.',
   NETWORK: 'Não consegui falar com a API. O backend está rodando?',
 };
 
@@ -112,6 +113,7 @@ async function enfileirar(params: CloneParams): Promise<string> {
   } catch {
     throw new ApiError('NETWORK');
   }
+  if (response.status === 429) throw new ApiError('RATE_LIMIT');
   if (!response.ok) throw erroDoCorpo(await lerJson(response), response.status);
   const corpo = (await lerJson(response)) as { id?: string } | null;
   if (!corpo?.id) throw new ApiError('FETCH_FAILED', 'A API não devolveu o id do job.');

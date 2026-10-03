@@ -2,9 +2,10 @@ import 'dotenv/config'; // carrega o .env antes de qualquer coisa ler process.en
 import 'reflect-metadata';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import IORedis from 'ioredis';
 import { AppModule } from './app.module';
-import { REDIS_URL, corsOrigin } from './config';
+import { REDIS_URL, TRUST_PROXY, corsOrigin } from './config';
 
 /**
  * A fila (Etapa 6) precisa do Redis. Sem essa checagem, um Redis fora do ar vira um
@@ -34,7 +35,11 @@ async function assertRedis(): Promise<void> {
 async function bootstrap() {
   await assertRedis();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Atrás do proxy do Railway, confia em N saltos para o req.ip ser o IP real do usuário
+  // (e não o do proxy). É o que faz o limite de taxa contar por pessoa.
+  app.set('trust proxy', TRUST_PROXY);
 
   app.enableCors({
     origin: corsOrigin(),

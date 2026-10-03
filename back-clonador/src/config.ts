@@ -49,6 +49,22 @@ export const QUEUE = {
 } as const;
 
 /**
+ * Limite de taxa do POST /clone (abuso / custo).
+ * Padrão: 10 clones por hora por IP. ttl em MILISSEGUNDOS (exigência do @nestjs/throttler v6).
+ */
+export const RATE_LIMIT = {
+  ttlMs: Number(process.env.RATE_TTL_MS ?? 60 * 60_000),
+  limit: Number(process.env.RATE_LIMIT ?? 10),
+} as const;
+
+/**
+ * Saltos de proxy confiáveis (trust proxy). No Railway é 1 (o balanceador na frente).
+ * Sem isso, atrás de proxy todo mundo aparece com o mesmo IP e o limite não funciona.
+ * Local (sem proxy) pode ficar 1 também — não atrapalha.
+ */
+export const TRUST_PROXY = Number(process.env.TRUST_PROXY ?? 1);
+
+/**
  * URL do Redis.
  * Ordem: REDIS_URL cheia -> monta a partir das peças (REDISHOST/PORT/USER/PASSWORD, que
  * o Railway expõe) -> padrão local. Assim funciona de qualquer jeito que o provedor dê.
