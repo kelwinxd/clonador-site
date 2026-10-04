@@ -55,8 +55,12 @@ describe('assertPublicHost', () => {
     );
   });
 
-  it('libera IP interno quando ALLOW_PRIVATE_HOSTS=true (fixtures)', async () => {
+  it('devolve o próprio IP quando o host já é um IP público (para amarrar a conexão)', async () => {
+    await expect(assertPublicHost(new URL('http://8.8.8.8/'))).resolves.toBe('8.8.8.8');
+  });
+
+  it('não amarra (devolve null) quando ALLOW_PRIVATE_HOSTS=true (fixtures)', async () => {
     process.env.ALLOW_PRIVATE_HOSTS = 'true';
-    await expect(assertPublicHost(new URL('http://127.0.0.1:4173/ssr.html'))).resolves.toBeUndefined();
+    await expect(assertPublicHost(new URL('http://127.0.0.1:4173/ssr.html'))).resolves.toBeNull();
   });
 });

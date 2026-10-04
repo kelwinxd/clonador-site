@@ -45,9 +45,9 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       continuam estáticos — isso é da natureza do clone-foto.
 - [x] **Extra (front)** — tela de login no estilo Clone Ninja, com validação de e-mail. Ainda sem
       autenticação de verdade (qualquer e-mail válido entra); a lógica real fica para a Etapa 15.
-- [ ] **Etapa 9** — deploy: Dockerfile com imagem do Playwright, Railway, Redis, limite de
+- [x] **Etapa 9** — deploy: Dockerfile com imagem do Playwright, Railway, Redis, limite de
       requisições e health check. Aqui entra também a correção do DNS rebinding (fixar o IP já
-      verificado na conexão).
+      verificado na conexão). FEITO: deploy no Railway (Dockerfile) + Vercel, rate limit por IP, e amarração de IP no http-client (assertPublicHost devolve o IP aprovado; a conexão usa ele via dispatcher do undici).
 
 ## Fase 2 — Afiliado
 

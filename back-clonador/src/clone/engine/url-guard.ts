@@ -72,11 +72,19 @@ function allowsPrivateHosts(): boolean {
 }
 
 /**
- * Resolve o DNS do host e recusa se apontar para a rede interna.
+ * Resolve o DNS do host, recusa se apontar para a rede interna e DEVOLVE o IP aprovado.
+ *
+ * Esse IP é usado para "amarrar" a conexão (DNS rebinding): quem for buscar a URL conecta
+ * exatamente nesse IP, em vez de resolver o nome de novo — fechando a brecha de o atacante
+ * trocar a resposta do DNS entre a checagem e a conexão.
+ *
+ * Devolve null quando a checagem é pulada (ALLOW_PRIVATE_HOSTS=true, dev) — aí não há IP
+ * aprovado para amarrar e a conexão resolve o nome normalmente.
+ *
  * Precisa rodar em cada redirecionamento, não só na URL inicial.
  */
-export async function assertPublicHost(url: URL): Promise<void> {
-  if (allowsPrivateHosts()) return;
+export async function assertPublicHost(url: URL): Promise<string | null> {
+  if (allowsPrivateHosts()) return null;
 
   const host = url.hostname.replace(/^\[|\]$/g, '');
 
@@ -84,7 +92,7 @@ export async function assertPublicHost(url: URL): Promise<void> {
     if (isPrivateIp(host)) {
       throw new CloneError('BLOCKED_HOST', `Endereço de rede interna bloqueado: ${host}`);
     }
-    return;
+    return host; // já é IP: amarra nele mesmo
   }
 
   let addresses: Array<{ address: string }>;
@@ -94,7 +102,14 @@ export async function assertPublicHost(url: URL): Promise<void> {
     throw new CloneError('INVALID_URL', `Domínio não encontrado: ${host}`);
   }
 
+  if (addresses.length === 0) {
+    throw new CloneError('INVALID_URL', `Domínio não encontrado: ${host}`);
+  }
+
   if (addresses.some((entry) => isPrivateIp(entry.address))) {
     throw new CloneError('BLOCKED_HOST', `O domínio ${host} aponta para a rede interna`);
   }
+
+  // Todos os IPs são públicos; amarra no primeiro (o que a conexão vai usar).
+  return addresses[0].address;
 }

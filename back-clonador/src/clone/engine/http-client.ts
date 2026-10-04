@@ -1,7 +1,33 @@
-import { request } from 'undici';
+import { isIP } from 'node:net';
+import { Agent, Dispatcher, request } from 'undici';
 import { LIMITS, USER_AGENT } from '../../config';
 import { CloneError } from './errors';
 import { assertPublicHost, parseTargetUrl } from './url-guard';
+
+/**
+ * Dispatcher que força a conexão a ir para o IP já aprovado pela trava (amarração contra
+ * DNS rebinding). O `lookup` do undici é trocado para devolver sempre esse IP, então o nome
+ * não é resolvido de novo. O cabeçalho Host e o certificado TLS continuam usando o nome
+ * original (o undici cuida disso a partir da URL).
+ */
+function pinnedDispatcher(ip: string): Agent {
+  const family = isIP(ip) || 4;
+  // O undici chama o lookup com { all: true } e espera um array; cobrimos os dois formatos.
+  const lookup = (
+    _hostname: string,
+    options: { all?: boolean },
+    callback: (err: NodeJS.ErrnoException | null, address: unknown, family?: number) => void,
+  ) => {
+    if (options && options.all) {
+      callback(null, [{ address: ip, family }]);
+    } else {
+      callback(null, ip, family);
+    }
+  };
+  return new Agent({
+    connect: { lookup: lookup as never },
+  });
+}
 
 export interface HttpResult {
   body: Buffer;
@@ -32,23 +58,34 @@ export async function httpGet(rawUrl: string, options: HttpOptions = {}): Promis
   let current = parseTargetUrl(rawUrl);
 
   for (let hop = 0; hop <= LIMITS.maxRedirects; hop++) {
-    await assertPublicHost(current);
+    // Resolve e checa UMA vez; conecta nesse mesmo IP (amarração anti-rebinding).
+    const approvedIp = await assertPublicHost(current);
+    const dispatcher = approvedIp ? pinnedDispatcher(approvedIp) : undefined;
+    const fecharDispatcher = () => dispatcher?.close().catch(() => undefined);
 
-    const response = await requestOnce(current, timeoutMs, options);
+    let response;
+    try {
+      response = await requestOnce(current, timeoutMs, options, dispatcher);
+    } catch (error) {
+      await fecharDispatcher();
+      throw error;
+    }
 
     if (REDIRECT_STATUS.has(response.statusCode)) {
       const location = response.headers['location'];
       const target = Array.isArray(location) ? location[0] : location;
+      await response.body.dump().catch(() => undefined);
+      await fecharDispatcher();
       if (!target) {
         throw new CloneError('FETCH_FAILED', `Redirecionamento ${response.statusCode} sem destino`);
       }
-      await response.body.dump().catch(() => undefined);
       current = parseTargetUrl(new URL(target, current).toString());
       continue;
     }
 
     if (response.statusCode >= 400) {
       await response.body.dump().catch(() => undefined);
+      await fecharDispatcher();
       throw new CloneError(
         'FETCH_FAILED',
         `A página respondeu ${response.statusCode}`,
@@ -56,24 +93,33 @@ export async function httpGet(rawUrl: string, options: HttpOptions = {}): Promis
       );
     }
 
-    const body = await readWithLimit(response.body, maxBytes, current.toString());
-    const contentTypeHeader = response.headers['content-type'];
-    const contentType = Array.isArray(contentTypeHeader)
-      ? contentTypeHeader[0]
-      : (contentTypeHeader ?? '');
-
-    return { body, contentType, finalUrl: current.toString(), status: response.statusCode };
+    try {
+      const body = await readWithLimit(response.body, maxBytes, current.toString());
+      const contentTypeHeader = response.headers['content-type'];
+      const contentType = Array.isArray(contentTypeHeader)
+        ? contentTypeHeader[0]
+        : (contentTypeHeader ?? '');
+      return { body, contentType, finalUrl: current.toString(), status: response.statusCode };
+    } finally {
+      await fecharDispatcher();
+    }
   }
 
   throw new CloneError('FETCH_FAILED', 'Redirecionamentos demais');
 }
 
-async function requestOnce(url: URL, timeoutMs: number, options: HttpOptions) {
+async function requestOnce(
+  url: URL,
+  timeoutMs: number,
+  options: HttpOptions,
+  dispatcher?: Dispatcher,
+) {
   try {
     return await request(url, {
       // O undici v7 não segue redirecionamento sozinho — e é o que queremos:
       // cada destino passa pela checagem de host antes do próximo pedido.
       method: 'GET',
+      dispatcher, // amarra a conexão no IP aprovado (quando houver)
       headersTimeout: timeoutMs,
       bodyTimeout: timeoutMs,
       headers: {
