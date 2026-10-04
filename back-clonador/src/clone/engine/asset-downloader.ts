@@ -3,27 +3,7 @@ import pLimit from 'p-limit';
 import { LIMITS } from '../../config';
 import { CloneError } from './errors';
 import { httpGet } from './http-client';
-
-export interface DownloadedAsset {
-  url: string;
-  /** Caminho dentro do zip, ex.: assets/9f1c2b3d4e.png */
-  path: string;
-  body: Buffer;
-  contentType: string;
-}
-
-export interface DownloadReport {
-  assets: DownloadedAsset[];
-  /** URL absoluta -> caminho local, usado na reescrita do HTML. */
-  map: Map<string, string>;
-  failed: Array<{ url: string; reason: string }>;
-  totalBytes: number;
-}
-
-export interface DownloadOptions {
-  referer?: string;
-  onProgress?: (done: number, total: number) => void;
-}
+import { DownloadedAsset, DownloadOptions, DownloadReport } from './types';
 
 const EXTENSION_BY_TYPE: Record<string, string> = {
   'text/css': 'css',

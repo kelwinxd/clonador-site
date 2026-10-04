@@ -1,17 +1,4 @@
-import { CheerioDoc } from './html-rewriter';
-
-export interface LinkRule {
-  /** Trecho que identifica o link original (ex.: pay.hotmart.com/XXXX). */
-  from: string;
-  /** Link do afiliado que entra no lugar. */
-  to: string;
-}
-
-export interface ReplaceReport {
-  replaced: number;
-  /** Links de saída que sobraram sem troca — a interface mostra para o afiliado conferir. */
-  remaining: string[];
-}
+import { CheerioDoc, LinkRule, ReplaceReport } from './types';
 
 /**
  * Troca os links de compra pelo link do afiliado.

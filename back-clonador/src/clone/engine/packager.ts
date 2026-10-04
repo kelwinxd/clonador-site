@@ -1,9 +1,5 @@
 import archiver from 'archiver';
-
-export interface ZipEntry {
-  path: string;
-  content: Buffer | string;
-}
+import { ZipEntry } from './types';
 
 /** Junta HTML e assets num zip pronto para hospedar. */
 export async function buildZip(entries: ZipEntry[]): Promise<Buffer> {

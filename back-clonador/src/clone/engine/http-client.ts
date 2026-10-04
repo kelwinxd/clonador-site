@@ -3,6 +3,7 @@ import { Agent, Dispatcher, request } from 'undici';
 import { LIMITS, USER_AGENT } from '../../config';
 import { CloneError } from './errors';
 import { assertPublicHost, parseTargetUrl } from './url-guard';
+import { HttpOptions, HttpResult } from './types';
 
 /**
  * Dispatcher que força a conexão a ir para o IP já aprovado pela trava (amarração contra
@@ -27,22 +28,6 @@ function pinnedDispatcher(ip: string): Agent {
   return new Agent({
     connect: { lookup: lookup as never },
   });
-}
-
-export interface HttpResult {
-  body: Buffer;
-  contentType: string;
-  /** URL depois de todos os redirecionamentos: é ela que resolve os caminhos relativos. */
-  finalUrl: string;
-  status: number;
-}
-
-export interface HttpOptions {
-  timeoutMs?: number;
-  maxBytes?: number;
-  accept?: string;
-  /** Mandado como Referer: alguns servidores só entregam imagem/fonte se vier da própria página. */
-  referer?: string;
 }
 
 const REDIRECT_STATUS = new Set([301, 302, 303, 307, 308]);

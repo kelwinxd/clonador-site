@@ -2,7 +2,8 @@ import AdmZip from 'adm-zip';
 import { BrowserService } from '../src/clone/browser.service';
 import { CloneService } from '../src/clone/clone.service';
 import { CloneError } from '../src/clone/engine/errors';
-import { HostChecker, renderPage } from '../src/clone/engine/renderer';
+import { renderPage } from '../src/clone/engine/renderer';
+import { HostChecker } from '../src/clone/engine/types';
 import { startFixtureServer } from './fixtures/server';
 
 jest.setTimeout(120_000);

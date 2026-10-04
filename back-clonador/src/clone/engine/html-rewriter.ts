@@ -1,6 +1,5 @@
 import * as cheerio from 'cheerio';
-
-export type CheerioDoc = cheerio.CheerioAPI;
+import { CheerioDoc } from './types';
 
 /** Atributos simples que apontam para um arquivo. */
 const URL_ATTRIBUTES: Array<{ selector: string; attr: string }> = [

@@ -2,23 +2,11 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { Job, Worker } from 'bullmq';
 import { QUEUE } from '../config';
 import { CloneService } from './clone.service';
-import { CloneJobData } from './clone.types';
-import { CloneError, CloneErrorCode } from './engine/errors';
+import { CloneError } from './engine/errors';
+import { CloneErrorCode } from './engine/types';
+import { CloneJobData, CloneJobResult, SerializedError } from './types';
 import { redisConnection } from './queue.provider';
 import { ResultStore } from './result-store';
-
-/** O que o job devolve (fica no Redis, então é pequeno — o zip vai para o disco). */
-export interface CloneJobResult {
-  fileName: string;
-  meta: unknown;
-}
-
-/** Erro serializado no failedReason do job, para o status devolver o código certo. */
-export interface SerializedError {
-  code: CloneErrorCode | 'UNKNOWN';
-  message: string;
-  httpStatus?: number;
-}
 
 /**
  * Worker da fila: um Worker do BullMQ que pega jobs, roda o clone, guarda o zip no disco

@@ -2,17 +2,9 @@ import type { APIResponse, BrowserContext, Page, Route } from 'playwright';
 import { LIMITS } from '../../config';
 import { CloneError } from './errors';
 import { freezeAnimations } from './freeze-animations';
-import { PageSource } from './page-source';
 import { isTrackingHost } from './tracking';
+import { HostChecker, PageSource, RenderOptions } from './types';
 import { assertPublicHost, parseTargetUrl } from './url-guard';
-
-/** Diz se o navegador pode falar com esse endereço. */
-export type HostChecker = (url: URL) => Promise<boolean>;
-
-export interface RenderOptions {
-  /** Troca a checagem de host. Existe para os testes simularem a rede interna. */
-  isAllowed?: HostChecker;
-}
 
 /**
  * Tipos que não ajudam a montar o HTML. Os arquivos em si são baixados depois,

@@ -1,10 +1,4 @@
-import { CheerioDoc } from './html-rewriter';
-
-export interface RenderDecision {
-  render: boolean;
-  /** Motivo da decisão: vai para o log e para o clone-info.json. */
-  reason: string;
-}
+import { CheerioDoc, RenderDecision } from './types';
 
 /** Ajustes da heurística num lugar só, para calibrar com páginas reais. */
 export const DETECTOR = {

@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import IORedis from 'ioredis';
 import { io, Socket } from 'socket.io-client';
 import { AppModule } from '../src/app.module';
-import { CloneProgress } from '../src/clone/clone.types';
+import { CloneProgress } from '../src/clone/types';
 import { REDIS_URL } from '../src/config';
 import { startFixtureServer } from './fixtures/server';
 

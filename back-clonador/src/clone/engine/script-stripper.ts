@@ -1,10 +1,6 @@
-import { CheerioDoc, resolveAssetUrl } from './html-rewriter';
+import { resolveAssetUrl } from './html-rewriter';
+import { CheerioDoc, StripReport } from './types';
 import { isTrackingHost, TRACKING_SNIPPET } from './tracking';
-
-export interface StripReport {
-  removed: number;
-  kept: number;
-}
 
 /**
  * Tira os scripts do framework de uma página que foi renderizada pelo navegador.

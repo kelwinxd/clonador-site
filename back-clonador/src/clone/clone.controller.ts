@@ -18,10 +18,10 @@ import { Queue } from 'bullmq';
 import type { Response } from 'express';
 import { QUEUE } from '../config';
 import { CloneRequestDto } from './dto/clone-request.dto';
-import { CloneJobData, CloneProgress } from './clone.types';
-import { CloneJobResult, parseFailedReason } from './clone.worker';
+import { CloneJobData, CloneJobResult, CloneProgress } from './types';
+import { parseFailedReason } from './clone.worker';
 import { CLONE_QUEUE } from './queue.provider';
-import { CloneErrorCode } from './engine/errors';
+import { CloneErrorCode } from './engine/types';
 import { ResultStore } from './result-store';
 
 const STATUS_BY_CODE: Record<CloneErrorCode | 'UNKNOWN', HttpStatus> = {

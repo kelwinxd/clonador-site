@@ -4,12 +4,7 @@ import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { QUEUE } from '../config';
-import { CloneMeta } from './clone.service';
-
-export interface StoredResult {
-  fileName: string;
-  meta: CloneMeta;
-}
+import { StoredResult } from './types';
 
 /**
  * Guarda o .zip de cada clone no disco temporário, com validade.

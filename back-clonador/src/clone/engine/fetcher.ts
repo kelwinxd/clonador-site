@@ -1,7 +1,7 @@
 import { LIMITS } from '../../config';
 import { CloneError } from './errors';
 import { decodeHtml, httpGet } from './http-client';
-import { PageSource } from './page-source';
+import { PageSource } from './types';
 
 /**
  * Passo 1 do pipeline: pegar o HTML com HTTP simples, sem navegador.

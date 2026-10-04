@@ -1,4 +1,5 @@
-import { DownloadedAsset, DownloadOptions, downloadAssets, DownloadReport } from './asset-downloader';
+import { downloadAssets } from './asset-downloader';
+import { DownloadedAsset, DownloadOptions, DownloadReport } from './types';
 import { collectCssRefs, isCssAsset, rewriteCss } from './css-assets';
 
 /** Quantas vezes seguir @import em cadeia (css importa css importa css...). */

@@ -10,8 +10,8 @@ import {
 import { Queue, QueueEvents } from 'bullmq';
 import type { Server, Socket } from 'socket.io';
 import { QUEUE, corsOrigin } from '../config';
-import { CloneJobData, CloneProgress } from './clone.types';
-import { CloneJobResult, parseFailedReason } from './clone.worker';
+import { CloneJobData, CloneJobResult, CloneProgress } from './types';
+import { parseFailedReason } from './clone.worker';
 import { CLONE_QUEUE, redisConnection } from './queue.provider';
 
 /**

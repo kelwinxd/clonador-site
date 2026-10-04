@@ -3,43 +3,14 @@ import { BrowserService } from './browser.service';
 import { downloadPageAssets } from './engine/asset-pipeline';
 import { CloneError } from './engine/errors';
 import { fetchPage } from './engine/fetcher';
-import { CheerioDoc, collectAssets, parseHtml, rewriteAssets } from './engine/html-rewriter';
-import { LinkRule, replaceLinks } from './engine/link-replacer';
-import { PageMode, PageSource } from './engine/page-source';
-import { ProgressReporter } from './clone.types';
+import { collectAssets, parseHtml, rewriteAssets } from './engine/html-rewriter';
+import { replaceLinks } from './engine/link-replacer';
 import { buildZip } from './engine/packager';
 import { needsRender } from './engine/render-detector';
 import { renderPage } from './engine/renderer';
 import { stripFrameworkScripts } from './engine/script-stripper';
-
-export interface CloneInput {
-  url: string;
-  links?: LinkRule[];
-  forceRender?: boolean;
-}
-
-export interface CloneMeta {
-  sourceUrl: string;
-  finalUrl: string;
-  mode: PageMode;
-  /** O detector (ou o usuário, ou um bloqueio no fetch) pediu navegador? */
-  renderRecommended: boolean;
-  reason: string;
-  /** Scripts do framework tirados no modo render. */
-  scriptsRemoved: number;
-  assets: number;
-  failedAssets: Array<{ url: string; reason: string }>;
-  totalBytes: number;
-  linksReplaced: number;
-  remainingLinks: string[];
-  clonedAt: string;
-}
-
-export interface CloneResult {
-  zip: Buffer;
-  meta: CloneMeta;
-  fileName: string;
-}
+import { CheerioDoc, PageSource } from './engine/types';
+import { CloneInput, CloneMeta, CloneResult, ProgressReporter } from './types';
 
 /** Respostas de "não quero robô" que costumam passar num navegador de verdade. */
 const RETRY_WITH_BROWSER_STATUS = new Set([401, 403, 429, 503]);
