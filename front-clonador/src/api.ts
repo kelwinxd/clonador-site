@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client';
-import type { CloneErrorCode, CloneMeta, CloneResult, LinkRule } from './types';
+import type { CloneErrorCode, CloneMeta, CloneResult, LinkRule, PixelRule } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -31,6 +31,7 @@ export class ApiError extends Error {
 export interface CloneParams {
   url: string;
   links: LinkRule[];
+  pixels: PixelRule[];
   acceptedTerms: boolean;
   forceRender?: boolean;
 }

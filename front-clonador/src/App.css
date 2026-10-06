@@ -690,6 +690,25 @@ summary {
   background: #a78bfa;
 }
 
+/* Pixels: cores de marca */
+.tag-plataforma.pixel.meta {
+  background: #1877f2;
+  color: #fff;
+}
+.tag-plataforma.pixel.ga4,
+.tag-plataforma.pixel.ua {
+  background: #e8710a;
+  color: #fff;
+}
+.tag-plataforma.pixel.gtm {
+  background: #4285f4;
+  color: #fff;
+}
+.tag-plataforma.pixel.tiktok {
+  background: #010101;
+  color: #fff;
+}
+
 .checkout-url {
   flex: 1;
   min-width: 140px;

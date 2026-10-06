@@ -67,7 +67,7 @@ export class CloneController {
     try {
       job = await this.queue.add(
         'clone',
-        { url: body.url, links: body.links, forceRender: body.forceRender },
+        { url: body.url, links: body.links, pixels: body.pixels, forceRender: body.forceRender },
         {
           removeOnComplete: { count: QUEUE.keepCompleted },
           removeOnFail: { count: QUEUE.keepFailed },

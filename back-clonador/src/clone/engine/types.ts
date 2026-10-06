@@ -97,6 +97,33 @@ export interface CheckoutReport {
   platforms: CheckoutPlatform[];
 }
 
+/** Plataformas de pixel/analytics que o detector reconhece. */
+export type PixelPlatform = 'meta' | 'ga4' | 'gtm' | 'tiktok' | 'ua';
+
+/** Um pixel achado na página. */
+export interface PixelMatch {
+  platform: PixelPlatform;
+  /** Nome amigável, para a interface. */
+  platformName: string;
+  /** O ID encontrado (ex.: G-ABC123, GTM-XYZ, 1234567890123456). */
+  id: string;
+}
+
+/** O que o detector de pixels devolve, sem repetir ID. */
+export interface PixelReport {
+  matches: PixelMatch[];
+}
+
+/** Regra de troca de pixel: o ID antigo sai, o do afiliado entra. */
+export interface PixelRule {
+  from: string;
+  to: string;
+}
+
+export interface PixelReplaceReport {
+  replaced: number;
+}
+
 export interface ReplaceReport {
   replaced: number;
   /** Links de saída que sobraram sem troca — a interface mostra para o afiliado conferir. */

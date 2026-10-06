@@ -7,6 +7,8 @@ import { fetchPage } from './engine/fetcher';
 import { collectAssets, parseHtml, rewriteAssets } from './engine/html-rewriter';
 import { replaceLinks } from './engine/link-replacer';
 import { buildZip } from './engine/packager';
+import { detectPixels } from './engine/pixel-detector';
+import { replacePixels } from './engine/pixel-replacer';
 import { needsRender } from './engine/render-detector';
 import { renderPage } from './engine/renderer';
 import { stripFrameworkScripts } from './engine/script-stripper';
@@ -56,11 +58,13 @@ export class CloneService {
     // 4. Aponta o HTML para os arquivos locais.
     rewriteAssets($, source.finalUrl, download.map);
 
-    // 5. Detecta os checkouts conhecidos (Hotmart, Kiwify...) para reportar ao afiliado.
+    // 5. Detecta checkouts e pixels (só reporta; a troca vem com as regras do afiliado).
     const checkouts = detectCheckouts($);
+    const pixels = detectPixels($);
 
-    // 6. Troca os links de compra pelo link do afiliado.
+    // 6. Troca os links de compra e os IDs de pixel pelos do afiliado.
     const links = replaceLinks($, input.links ?? []);
+    const pixelTroca = replacePixels($, input.pixels ?? []);
 
     const meta: CloneMeta = {
       sourceUrl: input.url,
@@ -75,6 +79,8 @@ export class CloneService {
       linksReplaced: links.replaced,
       remainingLinks: links.remaining,
       checkouts: checkouts.matches,
+      pixels: pixels.matches,
+      pixelsReplaced: pixelTroca.replaced,
       clonedAt: new Date().toISOString(),
     };
 

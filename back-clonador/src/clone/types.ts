@@ -1,4 +1,11 @@
-import { CheckoutMatch, CloneErrorCode, LinkRule, PageMode } from './engine/types';
+import {
+  CheckoutMatch,
+  CloneErrorCode,
+  LinkRule,
+  PageMode,
+  PixelMatch,
+  PixelRule,
+} from './engine/types';
 
 /**
  * Tipos de dados do módulo de clonagem e suas dependências (serviço, fila, worker,
@@ -10,6 +17,7 @@ import { CheckoutMatch, CloneErrorCode, LinkRule, PageMode } from './engine/type
 export interface CloneInput {
   url: string;
   links?: LinkRule[];
+  pixels?: PixelRule[];
   forceRender?: boolean;
 }
 
@@ -29,6 +37,10 @@ export interface CloneMeta {
   remainingLinks: string[];
   /** Checkouts detectados na página (Hotmart, Kiwify...) para o afiliado trocar o link. */
   checkouts: CheckoutMatch[];
+  /** Pixels detectados (Meta, GA4, GTM, TikTok) para o afiliado trocar o ID. */
+  pixels: PixelMatch[];
+  /** Quantos IDs de pixel foram trocados pelo do afiliado. */
+  pixelsReplaced: number;
   clonedAt: string;
 }
 
@@ -44,6 +56,7 @@ export interface CloneResult {
 export interface CloneJobData {
   url: string;
   links?: LinkRule[];
+  pixels?: PixelRule[];
   forceRender?: boolean;
 }
 

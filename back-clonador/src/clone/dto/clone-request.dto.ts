@@ -20,6 +20,18 @@ export class LinkRuleDto {
   to!: string;
 }
 
+export class PixelRuleDto {
+  /** ID antigo detectado na página (ex.: G-ABC123, GTM-XYZ, 1234567890123456). */
+  @IsString()
+  @MinLength(3)
+  from!: string;
+
+  /** ID do afiliado que entra no lugar (também é um ID, não uma URL). */
+  @IsString()
+  @MinLength(3)
+  to!: string;
+}
+
 export class CloneRequestDto {
   /**
    * require_tld: false libera hosts sem ponto, como http://localhost:4173 das páginas de teste.
@@ -41,6 +53,12 @@ export class CloneRequestDto {
   @Type(() => LinkRuleDto)
   @ArrayMaxSize(20)
   links?: LinkRuleDto[];
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => PixelRuleDto)
+  @ArrayMaxSize(20)
+  pixels?: PixelRuleDto[];
 
   /**
    * Termo de uso: o usuário declara que tem autorização para clonar a página.

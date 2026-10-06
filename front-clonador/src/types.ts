@@ -12,7 +12,23 @@ export interface CloneMeta {
   linksReplaced: number;
   remainingLinks: string[];
   checkouts: CheckoutMatch[];
+  pixels: PixelMatch[];
+  pixelsReplaced: number;
   clonedAt: string;
+}
+
+/** Espelha o PixelMatch do backend (engine/types.ts). */
+export type PixelPlatform = 'meta' | 'ga4' | 'gtm' | 'tiktok' | 'ua';
+
+export interface PixelMatch {
+  platform: PixelPlatform;
+  platformName: string;
+  id: string;
+}
+
+export interface PixelRule {
+  from: string;
+  to: string;
 }
 
 /** Espelha o CheckoutMatch do backend (engine/types.ts). */

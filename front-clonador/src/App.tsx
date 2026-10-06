@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import { ApiError, baixarArquivo, cloneSite, type CloneProgress } from './api';
 import { montarHtmlAutonomo, montarPreview, type Preview } from './preview';
-import type { CloneResult, LinkRule } from './types';
+import type { CloneResult, LinkRule, PixelRule } from './types';
 
 type Status = 'parado' | 'clonando' | 'pronto' | 'erro';
 type Dispositivo = 'desktop' | 'mobile';
@@ -45,6 +45,7 @@ function porcentagem(progresso: CloneProgress | null): number | null {
 export default function App() {
   const [url, setUrl] = useState('');
   const [links, setLinks] = useState<LinkRule[]>([{ from: '', to: '' }]);
+  const [pixels, setPixels] = useState<PixelRule[]>([{ from: '', to: '' }]);
   const [termos, setTermos] = useState(false);
   const [status, setStatus] = useState<Status>('parado');
   const [resultado, setResultado] = useState<CloneResult | null>(null);
@@ -86,6 +87,7 @@ export default function App() {
           url: url.trim(),
           acceptedTerms: termos,
           links: links.filter((link) => link.from.trim() && link.to.trim()),
+          pixels: pixels.filter((p) => p.from.trim() && p.to.trim()),
         },
         setProgresso,
       );
@@ -126,6 +128,25 @@ export default function App() {
         return atual.map((link, i) => (i === vazia ? { from: checkoutUrl, to: '' } : link));
       }
       return [...atual, { from: checkoutUrl, to: '' }];
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function atualizarPixel(indice: number, campo: keyof PixelRule, valor: string) {
+    setPixels((atual) =>
+      atual.map((p, posicao) => (posicao === indice ? { ...p, [campo]: valor } : p)),
+    );
+  }
+
+  /** Leva um pixel detectado para a área de troca (preenche o "de"); o afiliado cola o ID dele. */
+  function usarPixel(pixelId: string) {
+    setPixels((atual) => {
+      if (atual.some((p) => p.from.trim() === pixelId)) return atual;
+      const vazia = atual.findIndex((p) => !p.from.trim() && !p.to.trim());
+      if (vazia >= 0) {
+        return atual.map((p, i) => (i === vazia ? { from: pixelId, to: '' } : p));
+      }
+      return [...atual, { from: pixelId, to: '' }];
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -228,6 +249,47 @@ export default function App() {
             + Link
           </button>
 
+          <SecaoTitulo numero={3} titulo="Pixels" />
+          <p className="ajuda">
+            Troque o ID de rastreamento (Meta, GA4, GTM, TikTok) pelo seu. Deixe em branco para
+            manter o original. Os pixels achados aparecem no resultado com um atalho.
+          </p>
+
+          {pixels.map((pixel, indice) => (
+            <div className="linha-link" key={indice}>
+              <input
+                value={pixel.from}
+                onChange={(e) => atualizarPixel(indice, 'from', e.target.value)}
+                placeholder="G-ABC123 / 16 dígitos…"
+              />
+              <span className="seta" aria-hidden="true">
+                →
+              </span>
+              <input
+                value={pixel.to}
+                onChange={(e) => atualizarPixel(indice, 'to', e.target.value)}
+                placeholder="seu ID"
+              />
+              <button
+                type="button"
+                className="botao-icone"
+                aria-label={`Remover pixel ${indice + 1}`}
+                onClick={() => setPixels((a) => a.filter((_, p) => p !== indice))}
+                disabled={pixels.length === 1}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            className="botao-ghost"
+            onClick={() => setPixels((a) => [...a, { from: '', to: '' }])}
+          >
+            + Pixel
+          </button>
+
           <label className="termo">
             <input
               type="checkbox"
@@ -319,7 +381,9 @@ export default function App() {
             </div>
           </div>
 
-          {resultado && <Resultado clone={resultado} onUsarCheckout={usarCheckout} />}
+          {resultado && (
+            <Resultado clone={resultado} onUsarCheckout={usarCheckout} onUsarPixel={usarPixel} />
+          )}
         </div>
       </div>
     </div>
@@ -350,12 +414,15 @@ function PlaceholderPreview({ clonando }: { clonando: boolean }) {
 function Resultado({
   clone,
   onUsarCheckout,
+  onUsarPixel,
 }: {
   clone: CloneResult;
   onUsarCheckout: (url: string) => void;
+  onUsarPixel: (id: string) => void;
 }) {
   const { meta } = clone;
   const checkouts = meta.checkouts ?? [];
+  const pixels = meta.pixels ?? [];
 
   return (
     <div className="resultado">
@@ -387,6 +454,33 @@ function Resultado({
         </div>
       )}
 
+      {pixels.length > 0 && (
+        <div className="checkouts">
+          <div className="checkouts-titulo">
+            📊 {pixels.length === 1 ? 'Pixel detectado' : `${pixels.length} pixels detectados`}
+          </div>
+          <p className="ajuda">
+            Clique em <strong>Trocar</strong> para levar o ID para a seção Pixels e colocar o seu —
+            depois é só clonar de novo.
+          </p>
+          <ul className="lista-checkouts">
+            {pixels.map((p) => (
+              <li key={`${p.platform}:${p.id}`}>
+                <span className={`tag-plataforma pixel ${p.platform}`}>{p.platformName}</span>
+                <code className="checkout-url">{p.id}</code>
+                <button
+                  type="button"
+                  className="botao-ghost pequeno"
+                  onClick={() => onUsarPixel(p.id)}
+                >
+                  Trocar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <ul className="numeros">
         <li>
           <strong>{meta.assets}</strong> {meta.assets === 1 ? 'arquivo' : 'arquivos'}
@@ -397,6 +491,10 @@ function Resultado({
         <li>
           <strong>{meta.linksReplaced}</strong>{' '}
           {meta.linksReplaced === 1 ? 'link trocado' : 'links trocados'}
+        </li>
+        <li>
+          <strong>{meta.pixelsReplaced ?? 0}</strong>{' '}
+          {(meta.pixelsReplaced ?? 0) === 1 ? 'pixel trocado' : 'pixels trocados'}
         </li>
         <li>
           <strong>{meta.mode === 'fetch' ? 'sem navegador' : 'com navegador'}</strong>

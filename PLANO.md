@@ -62,7 +62,12 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       do produto), reportada em `CloneMeta.checkouts`. O front mostra os checkouts achados e o botão
       "Trocar" leva o link para o campo de troca; o afiliado só cola o link dele e reclona.
       Crescer a lista de plataformas é só adicionar uma entrada em `PLATFORMS`. 7 testes.
-- [ ] **Etapa 12** — pixels: achar Meta Pixel, GA4/GTM e TikTok, e trocar pelo ID do afiliado.
+- [x] **Etapa 12** — pixels: achar Meta Pixel, GA4/GTM e TikTok, e trocar pelo ID do afiliado.
+      FEITO: `pixel-detector.ts` acha Meta, GA4, GTM, TikTok e o UA legado (padrões com contexto:
+      fbq, gtag, ttq.load, o domínio — nunca dígitos soltos), reportados em `CloneMeta.pixels`.
+      `pixel-replacer.ts` troca o ID pelo do afiliado em `<script>` (inline e src), `<img>`,
+      `<iframe>` e no texto do `<noscript>` do Meta. DTO ganhou `pixels: PixelRuleDto[]`. O front
+      tem a seção "Pixels" e mostra os pixels achados com o botão "Trocar". 12 testes.
 - [ ] **Etapa 13** — editor simples: trocar texto, link e imagem, esconder bloco. Sem arrastar.
 - [ ] **Etapa 14** — histórico de clones.
 
