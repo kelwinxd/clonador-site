@@ -74,6 +74,29 @@ export interface LinkRule {
   to: string;
 }
 
+/** Plataformas de checkout que o detector reconhece. */
+export type CheckoutPlatform = 'hotmart' | 'kiwify' | 'braip' | 'eduzz' | 'monetizze';
+
+/** Um link de checkout achado na página. */
+export interface CheckoutMatch {
+  platform: CheckoutPlatform;
+  /** Nome amigável da plataforma, para a interface. */
+  platformName: string;
+  /** URL do checkout, como está na página. */
+  url: string;
+  /** Código do produto extraído da URL, quando dá para identificar. */
+  productId?: string;
+  /** Onde foi achado: link (<a>) ou formulário (<form>). */
+  where: 'link' | 'form';
+}
+
+/** O que o detector devolve: os checkouts achados, sem repetir URL. */
+export interface CheckoutReport {
+  matches: CheckoutMatch[];
+  /** Plataformas distintas encontradas (atalho para a interface). */
+  platforms: CheckoutPlatform[];
+}
+
 export interface ReplaceReport {
   replaced: number;
   /** Links de saída que sobraram sem troca — a interface mostra para o afiliado conferir. */

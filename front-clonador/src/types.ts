@@ -11,7 +11,19 @@ export interface CloneMeta {
   totalBytes: number;
   linksReplaced: number;
   remainingLinks: string[];
+  checkouts: CheckoutMatch[];
   clonedAt: string;
+}
+
+/** Espelha o CheckoutMatch do backend (engine/types.ts). */
+export type CheckoutPlatform = 'hotmart' | 'kiwify' | 'braip' | 'eduzz' | 'monetizze';
+
+export interface CheckoutMatch {
+  platform: CheckoutPlatform;
+  platformName: string;
+  url: string;
+  productId?: string;
+  where: 'link' | 'form';
 }
 
 export interface LinkRule {

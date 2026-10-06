@@ -113,6 +113,23 @@ export default function App() {
     );
   }
 
+  /**
+   * Leva um checkout detectado para a área de troca: preenche o campo "de" (o link original)
+   * na primeira linha vazia, ou cria uma nova. O afiliado só precisa colar o link dele no "para"
+   * e clonar de novo. Rola para o topo para ele ver o campo.
+   */
+  function usarCheckout(checkoutUrl: string) {
+    setLinks((atual) => {
+      if (atual.some((link) => link.from.trim() === checkoutUrl)) return atual;
+      const vazia = atual.findIndex((link) => !link.from.trim() && !link.to.trim());
+      if (vazia >= 0) {
+        return atual.map((link, i) => (i === vazia ? { from: checkoutUrl, to: '' } : link));
+      }
+      return [...atual, { from: checkoutUrl, to: '' }];
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   const clonando = status === 'clonando';
   const urlExibida = resultado?.meta.finalUrl ?? url;
 
@@ -302,7 +319,7 @@ export default function App() {
             </div>
           </div>
 
-          {resultado && <Resultado clone={resultado} />}
+          {resultado && <Resultado clone={resultado} onUsarCheckout={usarCheckout} />}
         </div>
       </div>
     </div>
@@ -330,11 +347,46 @@ function PlaceholderPreview({ clonando }: { clonando: boolean }) {
   );
 }
 
-function Resultado({ clone }: { clone: CloneResult }) {
+function Resultado({
+  clone,
+  onUsarCheckout,
+}: {
+  clone: CloneResult;
+  onUsarCheckout: (url: string) => void;
+}) {
   const { meta } = clone;
+  const checkouts = meta.checkouts ?? [];
 
   return (
     <div className="resultado">
+      {checkouts.length > 0 && (
+        <div className="checkouts">
+          <div className="checkouts-titulo">
+            🎯 {checkouts.length === 1 ? 'Checkout detectado' : `${checkouts.length} checkouts detectados`}
+          </div>
+          <p className="ajuda">
+            Clique em <strong>Trocar</strong> para levar o link para o campo de troca e colar o seu
+            link de afiliado — depois é só clonar de novo.
+          </p>
+          <ul className="lista-checkouts">
+            {checkouts.map((c) => (
+              <li key={`${c.where}:${c.url}`}>
+                <span className={`tag-plataforma ${c.platform}`}>{c.platformName}</span>
+                <code className="checkout-url">{c.url}</code>
+                {c.productId && <span className="checkout-id">#{c.productId}</span>}
+                <button
+                  type="button"
+                  className="botao-ghost pequeno"
+                  onClick={() => onUsarCheckout(c.url)}
+                >
+                  Trocar
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <ul className="numeros">
         <li>
           <strong>{meta.assets}</strong> {meta.assets === 1 ? 'arquivo' : 'arquivos'}

@@ -1,4 +1,4 @@
-import { CloneErrorCode, LinkRule, PageMode } from './engine/types';
+import { CheckoutMatch, CloneErrorCode, LinkRule, PageMode } from './engine/types';
 
 /**
  * Tipos de dados do módulo de clonagem e suas dependências (serviço, fila, worker,
@@ -27,6 +27,8 @@ export interface CloneMeta {
   totalBytes: number;
   linksReplaced: number;
   remainingLinks: string[];
+  /** Checkouts detectados na página (Hotmart, Kiwify...) para o afiliado trocar o link. */
+  checkouts: CheckoutMatch[];
   clonedAt: string;
 }
 

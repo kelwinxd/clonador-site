@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { BrowserService } from './browser.service';
 import { downloadPageAssets } from './engine/asset-pipeline';
+import { detectCheckouts } from './engine/checkout-detector';
 import { CloneError } from './engine/errors';
 import { fetchPage } from './engine/fetcher';
 import { collectAssets, parseHtml, rewriteAssets } from './engine/html-rewriter';
@@ -55,7 +56,10 @@ export class CloneService {
     // 4. Aponta o HTML para os arquivos locais.
     rewriteAssets($, source.finalUrl, download.map);
 
-    // 5. Troca os links de compra pelo link do afiliado.
+    // 5. Detecta os checkouts conhecidos (Hotmart, Kiwify...) para reportar ao afiliado.
+    const checkouts = detectCheckouts($);
+
+    // 6. Troca os links de compra pelo link do afiliado.
     const links = replaceLinks($, input.links ?? []);
 
     const meta: CloneMeta = {
@@ -70,10 +74,11 @@ export class CloneService {
       totalBytes: download.totalBytes,
       linksReplaced: links.replaced,
       remainingLinks: links.remaining,
+      checkouts: checkouts.matches,
       clonedAt: new Date().toISOString(),
     };
 
-    // 6. Zip com o index, os assets e um resumo do que foi feito.
+    // 7. Zip com o index, os assets e um resumo do que foi feito.
     onProgress({ stage: 'packaging' });
     const zip = await buildZip([
       { path: 'index.html', content: $.html() },

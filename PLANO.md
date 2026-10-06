@@ -56,8 +56,12 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       `Clone`, o worker registra cada clone (sucesso e falha) via CloneRepository, endpoint
       GET /history. Degrada sozinho sem DATABASE_URL (produção segue sem histórico).
       **Metade B (armazenamento R2/S3) pendente** — resolve o disco efêmero dos zips.
-- [ ] **Etapa 11** — detectar checkout de Hotmart, Braip, Kiwify, Eduzz e Monetizze e sugerir a
-      troca, em vez de exigir que o usuário saiba o link original.
+- [x] **Etapa 11** — detectar checkout de Hotmart, Braip, Kiwify, Eduzz e Monetizze e sugerir a
+      troca, em vez de exigir que o usuário saiba o link original. FEITO: peça do motor
+      `checkout-detector.ts` (varre `<a href>` e `<form action>`, casa por domínio e extrai o código
+      do produto), reportada em `CloneMeta.checkouts`. O front mostra os checkouts achados e o botão
+      "Trocar" leva o link para o campo de troca; o afiliado só cola o link dele e reclona.
+      Crescer a lista de plataformas é só adicionar uma entrada em `PLATFORMS`. 7 testes.
 - [ ] **Etapa 12** — pixels: achar Meta Pixel, GA4/GTM e TikTok, e trocar pelo ID do afiliado.
 - [ ] **Etapa 13** — editor simples: trocar texto, link e imagem, esconder bloco. Sem arrastar.
 - [ ] **Etapa 14** — histórico de clones.
