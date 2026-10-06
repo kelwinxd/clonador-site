@@ -68,7 +68,15 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       `pixel-replacer.ts` troca o ID pelo do afiliado em `<script>` (inline e src), `<img>`,
       `<iframe>` e no texto do `<noscript>` do Meta. DTO ganhou `pixels: PixelRuleDto[]`. O front
       tem a seção "Pixels" e mostra os pixels achados com o botão "Trocar". 12 testes.
-- [ ] **Etapa 13** — editor simples: trocar texto, link e imagem, esconder bloco. Sem arrastar.
+- [x] **Etapa 13** — editor simples: trocar texto, link e imagem, esconder bloco. Sem arrastar.
+      FEITO (só no front): `editor.ts` liga por cima do iframe da prévia. Como o iframe é
+      same-origin e SEM allow-scripts, o clone não roda JS e é o React, de fora, que escuta o
+      clique e mexe no DOM (mais seguro e com um dono só). Ações: editar texto (contentEditable),
+      trocar link (href do `<a>`), trocar imagem (URL ou upload → data URI) e esconder bloco (com
+      desfazer). "Baixar editado" relê o HTML do iframe, restaura os caminhos assets/<hash>
+      (blob: → caminho) e reempacota o zip (`reempacotarZip`). Comportamento de plataforma
+      (clique capturado pelo pai, contentEditable sem allow-scripts, script do clone inerte)
+      validado num harness no navegador.
 - [ ] **Etapa 14** — histórico de clones.
 
 ## Fase 3 — Produto

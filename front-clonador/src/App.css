@@ -729,6 +729,73 @@ summary {
   border-radius: 7px;
 }
 
+/* ---------- Barra do editor (Etapa 13) ---------- */
+.editor-barra {
+  margin-top: 10px;
+  padding: 11px 13px;
+  background: var(--inner);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.editor-dica {
+  margin: 0;
+}
+
+.editor-alvo {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.editor-alvo code {
+  color: var(--orange);
+}
+
+.editor-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.editor-linha {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.editor-linha .rotulo {
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 48px;
+}
+
+.editor-linha input[type='text'],
+.editor-linha input:not([type]) {
+  flex: 1;
+  min-width: 160px;
+}
+
+.botao-ghost.ativo {
+  background: rgba(249, 115, 22, 0.12);
+  border-color: var(--orange);
+}
+
+.botao-ghost.arquivo {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.botao-preview.ghost.ativo {
+  background: rgba(249, 115, 22, 0.12);
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
 /* ---------- Responsivo ---------- */
 @media (max-width: 860px) {
   .grid {

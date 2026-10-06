@@ -18,6 +18,8 @@ const MIME_POR_EXTENSAO: Record<string, string> = {
 
 export interface Preview {
   html: string;
+  /** assets/<hash> -> blob:… (para o editor restaurar os caminhos ao exportar). */
+  mapa: Map<string, string>;
   /** Libera os endereços temporários criados para os arquivos. */
   descartar: () => void;
 }
@@ -52,8 +54,20 @@ export async function montarPreview(zipBlob: Blob): Promise<Preview> {
 
   return {
     html,
+    mapa,
     descartar: () => enderecos.forEach((endereco) => URL.revokeObjectURL(endereco)),
   };
+}
+
+/**
+ * Reempacota o zip trocando só o index.html pelo HTML editado. Os assets ficam como estavam
+ * (o editor restaura os caminhos assets/<hash> antes de chamar aqui). Serve para baixar o
+ * clone depois das edições do usuário (Etapa 13).
+ */
+export async function reempacotarZip(zipBlob: Blob, novoHtml: string): Promise<Blob> {
+  const zip = await JSZip.loadAsync(zipBlob);
+  zip.file('index.html', novoHtml);
+  return zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
 }
 
 const URL_CSS = /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi;

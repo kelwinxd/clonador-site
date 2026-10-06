@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import { ApiError, baixarArquivo, cloneSite, type CloneProgress } from './api';
-import { montarHtmlAutonomo, montarPreview, type Preview } from './preview';
+import {
+  editarTexto,
+  esconder,
+  exportarHtml,
+  ligarEditor,
+  linkDe,
+  mostrar,
+  type EditorHandle,
+} from './editor';
+import { montarHtmlAutonomo, montarPreview, reempacotarZip, type Preview } from './preview';
 import type { CloneResult, LinkRule, PixelRule } from './types';
 
 type Status = 'parado' | 'clonando' | 'pronto' | 'erro';
@@ -54,8 +63,14 @@ export default function App() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progresso, setProgresso] = useState<CloneProgress | null>(null);
   const [dispositivo, setDispositivo] = useState<Dispositivo>('desktop');
+  const [editando, setEditando] = useState(false);
+  const [selecionado, setSelecionado] = useState<HTMLElement | null>(null);
+  const [editandoTexto, setEditandoTexto] = useState(false);
+  const [escondidos, setEscondidos] = useState<HTMLElement[]>([]);
   const previaAnterior = useRef<Preview | null>(null);
   const previewUrlAnterior = useRef<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const editorRef = useRef<EditorHandle | null>(null);
 
   // Os endereços temporários da prévia precisam ser liberados quando trocam ou ao sair.
   useEffect(() => {
@@ -72,6 +87,22 @@ export default function App() {
     previewUrlAnterior.current = previewUrl;
   }, [previewUrl]);
 
+  // Liga o editor no documento do iframe quando o modo edição entra; desliga ao sair ou trocar.
+  useEffect(() => {
+    if (!editando || !previa) return;
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    const handle = ligarEditor(doc, (el) => {
+      setSelecionado(el);
+      setEditandoTexto(false);
+    });
+    editorRef.current = handle;
+    return () => {
+      handle.destruir();
+      editorRef.current = null;
+    };
+  }, [editando, previa]);
+
   async function enviar(evento: React.FormEvent) {
     evento.preventDefault();
     setStatus('clonando');
@@ -80,6 +111,9 @@ export default function App() {
     setPrevia(null);
     setPreviewUrl(null);
     setProgresso(null);
+    setEditando(false);
+    setSelecionado(null);
+    setEscondidos([]);
 
     try {
       const clone = await cloneSite(
@@ -149,6 +183,55 @@ export default function App() {
       return [...atual, { from: pixelId, to: '' }];
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function alternarTexto() {
+    if (!selecionado) return;
+    const novo = !editandoTexto;
+    editarTexto(selecionado, novo);
+    setEditandoTexto(novo);
+  }
+
+  function aplicarLink(href: string) {
+    const a = selecionado && linkDe(selecionado);
+    if (a) a.setAttribute('href', href);
+  }
+
+  function aplicarImagemUrl(src: string) {
+    if (selecionado instanceof HTMLImageElement && src.trim()) selecionado.src = src.trim();
+  }
+
+  function aplicarImagemArquivo(arquivo: File) {
+    if (!(selecionado instanceof HTMLImageElement)) return;
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      if (selecionado instanceof HTMLImageElement) selecionado.src = String(leitor.result);
+    };
+    leitor.readAsDataURL(arquivo);
+  }
+
+  function aplicarEsconder() {
+    if (!selecionado) return;
+    esconder(selecionado);
+    setEscondidos((a) => [...a, selecionado]);
+    selecionado.classList.remove('cn-sel');
+    setSelecionado(null);
+  }
+
+  function desfazerEsconder() {
+    setEscondidos((a) => {
+      const ultimo = a[a.length - 1];
+      if (ultimo) mostrar(ultimo);
+      return a.slice(0, -1);
+    });
+  }
+
+  async function baixarEditado() {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc || !resultado || !previa) return;
+    const html = exportarHtml(doc, previa.mapa);
+    const zip = await reempacotarZip(resultado.blob, html);
+    baixarArquivo(zip, resultado.fileName.replace(/\.zip$/i, '-editado.zip'));
   }
 
   const clonando = status === 'clonando';
@@ -337,20 +420,31 @@ export default function App() {
 
             {resultado ? (
               <div className="preview-acoes">
-                <a
-                  className="botao-preview ghost"
-                  href={previewUrl ?? undefined}
-                  target="_blank"
-                  rel="noopener"
+                <button
+                  type="button"
+                  className={`botao-preview ghost ${editando ? 'ativo' : ''}`}
+                  onClick={() => setEditando((e) => !e)}
                 >
-                  <IconeOlho /> Preview
-                </a>
+                  <IconeLapis /> {editando ? 'Concluir edição' : 'Editar'}
+                </button>
+                {!editando && (
+                  <a
+                    className="botao-preview ghost"
+                    href={previewUrl ?? undefined}
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <IconeOlho /> Preview
+                  </a>
+                )}
                 <button
                   type="button"
                   className="botao-preview pronto"
-                  onClick={() => baixarArquivo(resultado.blob, resultado.fileName)}
+                  onClick={() =>
+                    editando ? void baixarEditado() : baixarArquivo(resultado.blob, resultado.fileName)
+                  }
                 >
-                  <IconeDownload /> Baixar .zip
+                  <IconeDownload /> {editando ? 'Baixar editado' : 'Baixar .zip'}
                 </button>
               </div>
             ) : (
@@ -359,6 +453,20 @@ export default function App() {
               </span>
             )}
           </div>
+
+          {editando && (
+            <PainelEditor
+              selecionado={selecionado}
+              editandoTexto={editandoTexto}
+              escondidos={escondidos.length}
+              onTexto={alternarTexto}
+              onLink={aplicarLink}
+              onImagemUrl={aplicarImagemUrl}
+              onImagemArquivo={aplicarImagemArquivo}
+              onEsconder={aplicarEsconder}
+              onDesfazer={desfazerEsconder}
+            />
+          )}
 
           <div className={`browser-mock ${dispositivo}`}>
             <div className="chrome">
@@ -370,6 +478,7 @@ export default function App() {
             <div className="viewport">
               {previa ? (
                 <iframe
+                  ref={iframeRef}
                   className="previa-frame"
                   title="Prévia do clone"
                   sandbox="allow-same-origin"
@@ -388,6 +497,133 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+function PainelEditor({
+  selecionado,
+  editandoTexto,
+  escondidos,
+  onTexto,
+  onLink,
+  onImagemUrl,
+  onImagemArquivo,
+  onEsconder,
+  onDesfazer,
+}: {
+  selecionado: HTMLElement | null;
+  editandoTexto: boolean;
+  escondidos: number;
+  onTexto: () => void;
+  onLink: (href: string) => void;
+  onImagemUrl: (src: string) => void;
+  onImagemArquivo: (arquivo: File) => void;
+  onEsconder: () => void;
+  onDesfazer: () => void;
+}) {
+  const [linkVal, setLinkVal] = useState('');
+  const [imgVal, setImgVal] = useState('');
+
+  useEffect(() => {
+    const a = selecionado?.closest('a');
+    setLinkVal(a?.getAttribute('href') ?? '');
+    setImgVal('');
+  }, [selecionado]);
+
+  const ehImagem = selecionado instanceof HTMLImageElement;
+  const temLink = !!selecionado?.closest('a');
+
+  return (
+    <div className="editor-barra">
+      {!selecionado ? (
+        <p className="ajuda editor-dica">
+          Clique num elemento da página ao lado para editar: trocar texto, link ou imagem, ou
+          esconder o bloco.
+          {escondidos > 0 && (
+            <>
+              {' '}
+              <button type="button" className="botao-ghost pequeno" onClick={onDesfazer}>
+                Mostrar último escondido ({escondidos})
+              </button>
+            </>
+          )}
+        </p>
+      ) : (
+        <>
+          <div className="editor-alvo">
+            Selecionado: <code>{descreveElemento(selecionado)}</code>
+          </div>
+
+          <div className="editor-acoes">
+            <button
+              type="button"
+              className={`botao-ghost pequeno ${editandoTexto ? 'ativo' : ''}`}
+              onClick={onTexto}
+            >
+              {editandoTexto ? 'Concluir texto' : 'Editar texto'}
+            </button>
+            <button type="button" className="botao-ghost pequeno" onClick={onEsconder}>
+              Esconder bloco
+            </button>
+            {escondidos > 0 && (
+              <button type="button" className="botao-ghost pequeno" onClick={onDesfazer}>
+                Desfazer esconder ({escondidos})
+              </button>
+            )}
+          </div>
+
+          {temLink && (
+            <div className="editor-linha">
+              <span className="rotulo">Link</span>
+              <input
+                value={linkVal}
+                onChange={(e) => setLinkVal(e.target.value)}
+                placeholder="https://seu-link-de-afiliado…"
+              />
+              <button type="button" className="botao-ghost pequeno" onClick={() => onLink(linkVal)}>
+                Aplicar
+              </button>
+            </div>
+          )}
+
+          {ehImagem && (
+            <div className="editor-linha">
+              <span className="rotulo">Imagem</span>
+              <input
+                value={imgVal}
+                onChange={(e) => setImgVal(e.target.value)}
+                placeholder="cole uma URL de imagem…"
+              />
+              <button
+                type="button"
+                className="botao-ghost pequeno"
+                onClick={() => onImagemUrl(imgVal)}
+              >
+                Aplicar
+              </button>
+              <label className="botao-ghost pequeno arquivo">
+                Enviar arquivo
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => e.target.files?.[0] && onImagemArquivo(e.target.files[0])}
+                />
+              </label>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Descrição curta do elemento selecionado, para a barra do editor. */
+function descreveElemento(el: HTMLElement): string {
+  const tag = el.tagName.toLowerCase();
+  if (el instanceof HTMLImageElement) return `imagem <${tag}>`;
+  const texto = (el.textContent ?? '').trim().replace(/\s+/g, ' ');
+  if (texto) return `<${tag}> "${texto.slice(0, 40)}${texto.length > 40 ? '…' : ''}"`;
+  return `<${tag}>`;
 }
 
 function SecaoTitulo({ numero, titulo }: { numero: number; titulo: string }) {
@@ -586,6 +822,15 @@ function IconeDownload() {
   return (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16" />
+    </svg>
+  );
+}
+
+function IconeLapis() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </svg>
   );
 }
