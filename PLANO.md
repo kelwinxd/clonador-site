@@ -51,8 +51,11 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
 
 ## Fase 2 — Afiliado
 
-- [ ] **Etapa 10** — banco (Prisma + Postgres) e armazenamento dos zips fora do disco da máquina.
-      Antecipado da Fase 3 porque histórico e editor não funcionam sem isso.
+- [~] **Etapa 10** — banco (Prisma + Postgres) e armazenamento dos zips fora do disco.
+      **Metade A (banco) FEITA:** Postgres no docker-compose (porta 5433), Prisma 6 com a tabela
+      `Clone`, o worker registra cada clone (sucesso e falha) via CloneRepository, endpoint
+      GET /history. Degrada sozinho sem DATABASE_URL (produção segue sem histórico).
+      **Metade B (armazenamento R2/S3) pendente** — resolve o disco efêmero dos zips.
 - [ ] **Etapa 11** — detectar checkout de Hotmart, Braip, Kiwify, Eduzz e Monetizze e sugerir a
       troca, em vez de exigir que o usuário saiba o link original.
 - [ ] **Etapa 12** — pixels: achar Meta Pixel, GA4/GTM e TikTok, e trocar pelo ID do afiliado.

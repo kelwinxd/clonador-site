@@ -1,6 +1,6 @@
-# Redis para a fila (BullMQ) da Etapa 6.
-# Subir com: docker compose up -d
+# Serviços locais do projeto. Subir com: docker compose up -d
 services:
+  # Redis para a fila (BullMQ) da Etapa 6.
   redis:
     image: redis:7-alpine
     container_name: clonador-redis
@@ -17,5 +17,25 @@ services:
       timeout: 3s
       retries: 5
 
+  # Postgres para o banco (Etapa 10). Porta 5433 no host para não bater com outro Postgres.
+  postgres:
+    image: postgres:16-alpine
+    container_name: clonador-postgres
+    restart: unless-stopped
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: clonador
+      POSTGRES_PASSWORD: clonador
+      POSTGRES_DB: clonador
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U clonador']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
 volumes:
   redis-data:
+  postgres-data:

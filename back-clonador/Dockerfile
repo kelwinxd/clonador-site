@@ -13,8 +13,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copia o código e gera dist/.
+# Copia o código, gera o client do Prisma e compila dist/.
 COPY . .
+RUN npx prisma generate
 RUN npm run build
 
 # ---------- runtime (só o necessário para rodar) ----------
@@ -32,6 +33,10 @@ RUN npx playwright install chromium
 
 # Código já compilado, vindo do estágio de build.
 COPY --from=build /app/dist ./dist
+
+# Client do Prisma já gerado no build (o runtime não tem a CLI do Prisma para gerar).
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # O Railway injeta a porta em PORT; o app respeita process.env.PORT (padrão 3000).
 EXPOSE 3000

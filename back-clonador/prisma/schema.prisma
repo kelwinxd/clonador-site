@@ -1,0 +1,37 @@
+// Banco do Clone Ninja (Etapa 10).
+// Gerar o client:  npx prisma generate
+// Criar/alterar tabelas:  npx prisma migrate dev --name <nome>
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Um registro por clone pedido (histórico, base para contas e cotas).
+model Clone {
+  id            String   @id @default(cuid())
+  /// URL que o usuário pediu.
+  url           String
+  /// URL final, depois dos redirecionamentos.
+  finalUrl      String?
+  /// Como foi obtido: 'fetch' ou 'render'.
+  mode          String?
+  /// 'completed' ou 'failed'.
+  status        String
+  /// Código do erro quando status = 'failed' (ex.: BLOCKED_HOST).
+  errorCode     String?
+  /// Nome do .zip gerado (quando concluído).
+  fileName      String?
+  assets        Int      @default(0)
+  totalBytes    Int      @default(0)
+  linksReplaced Int      @default(0)
+  /// Id do job na fila, para cruzar com o download.
+  jobId         String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+}

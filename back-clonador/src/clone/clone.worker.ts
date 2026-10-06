@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, Optional, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Job, Worker } from 'bullmq';
 import { QUEUE } from '../config';
 import { CloneService } from './clone.service';
@@ -6,6 +6,7 @@ import { CloneError } from './engine/errors';
 import { CloneErrorCode } from './engine/types';
 import { CloneJobData, CloneJobResult, SerializedError } from './types';
 import { redisConnection } from './queue.provider';
+import { CloneRepository } from './clone.repository';
 import { ResultStore } from './result-store';
 
 /**
@@ -23,6 +24,8 @@ export class CloneWorker implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly cloneService: CloneService,
     private readonly resultStore: ResultStore,
+    // Opcional: nos testes o worker é montado na mão, sem banco. Em produção o Nest injeta.
+    @Optional() private readonly history?: CloneRepository,
   ) {}
 
   onModuleInit(): void {
@@ -54,10 +57,25 @@ export class CloneWorker implements OnModuleInit, OnModuleDestroy {
         meta: result.meta,
       });
 
+      await this.history?.registrar({
+        jobId,
+        url: job.data.url,
+        status: 'completed',
+        fileName: result.fileName,
+        meta: result.meta,
+      });
+
       return { fileName: result.fileName, meta: result.meta };
     } catch (error) {
+      const falha = serialize(error);
+      await this.history?.registrar({
+        jobId,
+        url: job.data.url,
+        status: 'failed',
+        errorCode: falha.code,
+      });
       // Guarda o código no failedReason (string), para o status traduzir para o usuário.
-      throw new Error(JSON.stringify(serialize(error)));
+      throw new Error(JSON.stringify(falha));
     }
   }
 }
