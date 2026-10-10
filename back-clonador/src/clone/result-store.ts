@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { createReadStream, ReadStream } from 'node:fs';
-import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { QUEUE } from '../config';
@@ -33,10 +33,20 @@ export class ResultStore implements OnModuleInit, OnModuleDestroy {
     if (this.timer) clearInterval(this.timer);
   }
 
-  async save(jobId: string, zip: Buffer, result: StoredResult): Promise<void> {
+  async save(jobId: string, zip: Buffer, result: StoredResult, previewHtml?: string): Promise<void> {
     await mkdir(this.dir, { recursive: true });
     await writeFile(this.zipPath(jobId), zip);
     await writeFile(this.metaPath(jobId), JSON.stringify(result), 'utf-8');
+    if (previewHtml != null) await writeFile(this.previewPath(jobId), previewHtml, 'utf-8');
+  }
+
+  /** HTML da prévia (servido ao anônimo); null se não existe ou já expirou. */
+  async readPreview(jobId: string): Promise<string | null> {
+    try {
+      return await readFile(this.previewPath(jobId), 'utf-8');
+    } catch {
+      return null;
+    }
   }
 
   /** Stream do zip para download; null se não existe (nunca gerado ou já expirou). */
@@ -91,6 +101,10 @@ export class ResultStore implements OnModuleInit, OnModuleDestroy {
 
   private metaPath(jobId: string): string {
     return join(this.dir, `${safe(jobId)}.json`);
+  }
+
+  private previewPath(jobId: string): string {
+    return join(this.dir, `${safe(jobId)}.preview.html`);
   }
 }
 

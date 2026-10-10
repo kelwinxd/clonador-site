@@ -52,10 +52,12 @@ export class CloneWorker implements OnModuleInit, OnModuleDestroy {
         void job.updateProgress(progress);
       });
 
-      await this.resultStore.save(jobId, result.zip, {
-        fileName: result.fileName,
-        meta: result.meta,
-      });
+      await this.resultStore.save(
+        jobId,
+        result.zip,
+        { fileName: result.fileName, meta: result.meta },
+        result.previewHtml,
+      );
 
       await this.history?.registrar({
         jobId,

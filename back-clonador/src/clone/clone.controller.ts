@@ -16,6 +16,7 @@ import {
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { Queue } from 'bullmq';
 import type { Response } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { QUEUE } from '../config';
 import { CloneRequestDto } from './dto/clone-request.dto';
 import { CloneJobData, CloneJobResult, CloneProgress } from './types';
@@ -108,6 +109,22 @@ export class CloneController {
     };
   }
 
+  /**
+   * Prévia servida pelo backend: HTML autossuficiente, LIVRE (sem login). O anônimo vê o clone,
+   * mas não leva o zip limpo (esse exige conta). Aberto num iframe pelo front.
+   */
+  @Get(':id/preview')
+  async preview(@Param('id') id: string, @Res() response: Response): Promise<void> {
+    const html = await this.resultStore.readPreview(id);
+    if (html == null) {
+      throw new NotFoundException('Prévia indisponível: o clone não terminou ou já expirou.');
+    }
+    response.setHeader('Content-Type', 'text/html; charset=utf-8');
+    response.send(html);
+  }
+
+  // Baixar o zip limpo exige conta (login opcional no app, obrigatório aqui).
+  @UseGuards(JwtAuthGuard)
   @Get(':id/download')
   async download(@Param('id') id: string, @Res() response: Response): Promise<void> {
     const job = await this.queue.getJob(id).catch(() => null);

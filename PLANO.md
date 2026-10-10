@@ -81,7 +81,15 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
 
 ## Fase 3 — Produto
 
-- [ ] **Etapa 15** — login (JWT + Passport) e cota por plano.
+- [~] **Etapa 15** — login (JWT + Passport) e cota por plano. **Modelo: login OPCIONAL** —
+      clonar e pré-visualizar são livres; **baixar o zip e editar exigem conta** (funil freemium).
+      **Backend FEITO:** tabela `User` (Prisma), `AuthModule` (register/login/me, bcrypt, JWT),
+      `JwtStrategy` + `JwtAuthGuard`. O `GET /clone/:id/download` agora exige token. A prévia do
+      anônimo vem de `GET /clone/:id/preview` (ABERTO): HTML autossuficiente montado no servidor
+      pelo `preview-inliner.ts` a partir dos assets já em memória (o editor, same-origin, segue
+      para quem baixou). Testado ponta a ponta (register/login/me, download 401 sem token / 200
+      com token, preview 200 aberto). **Falta:** religar a tela de login no front, guardar o token,
+      ramificar preview/baixar por login, e a cota por plano.
 - [ ] **Etapa 16** — cobrança com Stripe.
 - [ ] **Etapa 17** — deploy de 1 clique na conta Vercel do usuário.
 - [ ] **Etapa 18** — escala: worker separado da API, pool de navegadores, métricas.

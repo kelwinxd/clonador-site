@@ -48,6 +48,8 @@ export interface CloneResult {
   zip: Buffer;
   meta: CloneMeta;
   fileName: string;
+  /** HTML autossuficiente para a prévia servida pelo backend ao anônimo (zip fica trancado). */
+  previewHtml: string;
 }
 
 /* ---------- Fila (BullMQ) e progresso ---------- */

@@ -9,6 +9,7 @@ import { replaceLinks } from './engine/link-replacer';
 import { buildZip } from './engine/packager';
 import { detectPixels } from './engine/pixel-detector';
 import { replacePixels } from './engine/pixel-replacer';
+import { buildInlinePreview } from './engine/preview-inliner';
 import { needsRender } from './engine/render-detector';
 import { renderPage } from './engine/renderer';
 import { stripFrameworkScripts } from './engine/script-stripper';
@@ -84,7 +85,10 @@ export class CloneService {
       clonedAt: new Date().toISOString(),
     };
 
-    // 7. Zip com o index, os assets e um resumo do que foi feito.
+    // 7. Prévia autossuficiente (servida ao anônimo; o zip fica trancado atrás do login).
+    const previewHtml = buildInlinePreview($.html(), download.assets);
+
+    // 8. Zip com o index, os assets e um resumo do que foi feito.
     onProgress({ stage: 'packaging' });
     const zip = await buildZip([
       { path: 'index.html', content: $.html() },
@@ -96,7 +100,7 @@ export class CloneService {
       `clone concluído em ${Date.now() - startedAt}ms — ${source.mode}, ${download.assets.length} assets, ${download.failed.length} falhas`,
     );
 
-    return { zip, meta, fileName: buildFileName(source.finalUrl) };
+    return { zip, meta, fileName: buildFileName(source.finalUrl), previewHtml };
   }
 
   /**

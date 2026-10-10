@@ -98,6 +98,16 @@ export function corsOrigin(): string[] | RegExp {
   return lista && lista.length ? lista : /^http:\/\/localhost:\d+$/;
 }
 
+/**
+ * Autenticação (Etapa 15). Login é opcional: clonar e pré-visualizar são livres;
+ * baixar o zip e editar exigem conta. O segredo assina o JWT — em produção vem do ambiente.
+ */
+export const AUTH = {
+  jwtSecret: process.env.JWT_SECRET?.trim() || 'dev-secret-trocar-em-producao',
+  /** Validade do token, em segundos (padrão 7 dias). */
+  expiresInSeconds: Number(process.env.JWT_EXPIRES_IN_S ?? 7 * 24 * 60 * 60),
+} as const;
+
 /** User-Agent de navegador real: muitas páginas recusam clientes sem isso. */
 export const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';

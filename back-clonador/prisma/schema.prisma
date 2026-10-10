@@ -11,6 +11,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Conta de usuário. Login é opcional: clonar e pré-visualizar são livres;
+/// baixar o zip e editar exigem conta (Etapa 15).
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  senhaHash String
+  createdAt DateTime @default(now())
+}
+
 /// Um registro por clone pedido (histórico, base para contas e cotas).
 model Clone {
   id            String   @id @default(cuid())
