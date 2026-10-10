@@ -88,8 +88,12 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       anônimo vem de `GET /clone/:id/preview` (ABERTO): HTML autossuficiente montado no servidor
       pelo `preview-inliner.ts` a partir dos assets já em memória (o editor, same-origin, segue
       para quem baixou). Testado ponta a ponta (register/login/me, download 401 sem token / 200
-      com token, preview 200 aberto). **Falta:** religar a tela de login no front, guardar o token,
-      ramificar preview/baixar por login, e a cota por plano.
+      com token, preview 200 aberto). **Front FEITO:** `auth.ts` (register/login, token no
+      localStorage), `Login.tsx` virou modal (entrar/criar conta) contra a API, topbar com
+      e-mail/Sair. O clone não baixa mais sozinho: logado baixa o zip (same-origin, com editor);
+      anônimo vê a prévia do backend e um CTA, com baixar/editar atrás do login. Validado ponta a
+      ponta no navegador (anônimo → prévia servida; cadastro → download 200 + editor). **Falta
+      só:** a cota por plano, e ligar Postgres + JWT_SECRET em produção (Railway).
 - [ ] **Etapa 16** — cobrança com Stripe.
 - [ ] **Etapa 17** — deploy de 1 clique na conta Vercel do usuário.
 - [ ] **Etapa 18** — escala: worker separado da API, pool de navegadores, métricas.

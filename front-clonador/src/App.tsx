@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
-import { ApiError, baixarArquivo, cloneSite, type CloneProgress } from './api';
+import {
+  ApiError,
+  baixarArquivo,
+  baixarZip,
+  cloneSite,
+  urlPreview,
+  type CloneInfo,
+  type CloneProgress,
+} from './api';
+import { Login } from './Login';
+import { sair, sessaoAtual, type Sessao } from './auth';
 import {
   editarTexto,
   esconder,
@@ -11,7 +21,7 @@ import {
   type EditorHandle,
 } from './editor';
 import { montarHtmlAutonomo, montarPreview, reempacotarZip, type Preview } from './preview';
-import type { CloneResult, LinkRule, PixelRule } from './types';
+import type { CloneMeta, LinkRule, PixelRule } from './types';
 
 type Status = 'parado' | 'clonando' | 'pronto' | 'erro';
 type Dispositivo = 'desktop' | 'mobile';
@@ -57,11 +67,16 @@ export default function App() {
   const [pixels, setPixels] = useState<PixelRule[]>([{ from: '', to: '' }]);
   const [termos, setTermos] = useState(false);
   const [status, setStatus] = useState<Status>('parado');
-  const [resultado, setResultado] = useState<CloneResult | null>(null);
+  const [resultado, setResultado] = useState<CloneInfo | null>(null);
+  const [blob, setBlob] = useState<Blob | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [previa, setPrevia] = useState<Preview | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [progresso, setProgresso] = useState<CloneProgress | null>(null);
+  const [sessao, setSessao] = useState<Sessao | null>(() => sessaoAtual());
+  const [loginAberto, setLoginAberto] = useState(false);
+  const [loginMotivo, setLoginMotivo] = useState<string | undefined>(undefined);
   const [dispositivo, setDispositivo] = useState<Dispositivo>('desktop');
   const [editando, setEditando] = useState(false);
   const [selecionado, setSelecionado] = useState<HTMLElement | null>(null);
@@ -108,8 +123,10 @@ export default function App() {
     setStatus('clonando');
     setErro(null);
     setResultado(null);
+    setBlob(null);
     setPrevia(null);
     setPreviewUrl(null);
+    setPreviewSrc(null);
     setProgresso(null);
     setEditando(false);
     setSelecionado(null);
@@ -125,15 +142,15 @@ export default function App() {
         },
         setProgresso,
       );
-      // Prepara a prévia (iframe) e a página autossuficiente (Preview em nova aba) já aqui,
-      // para o botão Preview ser um link pronto — sem await no clique, que bloquearia o popup.
-      const [previaObj, htmlAutonomo] = await Promise.all([
-        montarPreview(clone.blob),
-        montarHtmlAutonomo(clone.blob),
-      ]);
       setResultado(clone);
-      setPrevia(previaObj);
-      setPreviewUrl(URL.createObjectURL(new Blob([htmlAutonomo], { type: 'text/html' })));
+
+      if (sessao) {
+        // Logado: baixa o zip e monta a prévia same-origin (com editor) aqui no navegador.
+        await carregarZip(clone.id, sessao.token);
+      } else {
+        // Anônimo: prévia read-only servida pelo backend; baixar/editar ficam atrás do login.
+        setPreviewSrc(urlPreview(clone.id));
+      }
       setStatus('pronto');
     } catch (problema) {
       // Só a mensagem amigável na tela; o detalhe técnico do backend não é exibido.
@@ -141,6 +158,47 @@ export default function App() {
       setErro(apiError?.message ?? 'Algo deu errado ao clonar. Tente de novo.');
       setStatus('erro');
     }
+  }
+
+  /** Baixa o zip (logado) e monta a prévia same-origin + a página do "Preview em nova aba". */
+  async function carregarZip(id: string, token: string) {
+    const zip = await baixarZip(id, token);
+    const [previaObj, htmlAutonomo] = await Promise.all([
+      montarPreview(zip),
+      montarHtmlAutonomo(zip),
+    ]);
+    setBlob(zip);
+    setPrevia(previaObj);
+    setPreviewSrc(null);
+    setPreviewUrl(URL.createObjectURL(new Blob([htmlAutonomo], { type: 'text/html' })));
+  }
+
+  function abrirLogin(motivo?: string) {
+    setLoginMotivo(motivo);
+    setLoginAberto(true);
+  }
+
+  /** Login/cadastro deu certo: guarda a sessão e, se há um clone anônimo na tela, destrava o zip. */
+  async function aoLogar(nova: Sessao) {
+    setSessao(nova);
+    setLoginAberto(false);
+    if (resultado && !blob) {
+      try {
+        await carregarZip(resultado.id, nova.token);
+      } catch {
+        setErro('Entrou, mas não consegui preparar o download. Tente clonar de novo.');
+      }
+    }
+  }
+
+  function fazerLogout() {
+    sair();
+    setSessao(null);
+    // Volta a prévia para o modo anônimo (servida pelo backend), sem o zip no navegador.
+    setEditando(false);
+    setBlob(null);
+    setPrevia(null);
+    if (resultado) setPreviewSrc(urlPreview(resultado.id));
   }
 
   function atualizarLink(indice: number, campo: keyof LinkRule, valor: string) {
@@ -228,14 +286,27 @@ export default function App() {
 
   async function baixarEditado() {
     const doc = iframeRef.current?.contentDocument;
-    if (!doc || !resultado || !previa) return;
+    if (!doc || !resultado || !previa || !blob) return;
     const html = exportarHtml(doc, previa.mapa);
-    const zip = await reempacotarZip(resultado.blob, html);
+    const zip = await reempacotarZip(blob, html);
     baixarArquivo(zip, resultado.fileName.replace(/\.zip$/i, '-editado.zip'));
+  }
+
+  function aoClicarBaixar() {
+    if (!resultado) return;
+    if (!sessao) return abrirLogin('Crie sua conta para baixar o .zip pronto para hospedar.');
+    if (editando) return void baixarEditado();
+    if (blob) baixarArquivo(blob, resultado.fileName);
+  }
+
+  function aoClicarEditar() {
+    if (!sessao) return abrirLogin('Crie sua conta para editar o clone antes de baixar.');
+    setEditando((e) => !e);
   }
 
   const clonando = status === 'clonando';
   const urlExibida = resultado?.meta.finalUrl ?? url;
+  const logado = !!sessao;
 
   return (
     <div className="app">
@@ -268,8 +339,21 @@ export default function App() {
             CLONE <span className="brand-ninja">NINJA</span>
           </span>
         </div>
-        <div className="avatar" aria-hidden="true">
-          U
+        <div className="conta">
+          {logado ? (
+            <>
+              <span className="conta-email" title={sessao!.email}>
+                {sessao!.email}
+              </span>
+              <button type="button" className="botao-ghost pequeno" onClick={fazerLogout}>
+                Sair
+              </button>
+            </>
+          ) : (
+            <button type="button" className="botao-ghost pequeno" onClick={() => abrirLogin()}>
+              Entrar
+            </button>
+          )}
         </div>
       </header>
 
@@ -423,28 +507,24 @@ export default function App() {
                 <button
                   type="button"
                   className={`botao-preview ghost ${editando ? 'ativo' : ''}`}
-                  onClick={() => setEditando((e) => !e)}
+                  onClick={aoClicarEditar}
                 >
                   <IconeLapis /> {editando ? 'Concluir edição' : 'Editar'}
+                  {!logado && <IconeCadeado />}
                 </button>
                 {!editando && (
                   <a
                     className="botao-preview ghost"
-                    href={previewUrl ?? undefined}
+                    href={logado ? (previewUrl ?? undefined) : urlPreview(resultado.id)}
                     target="_blank"
                     rel="noopener"
                   >
                     <IconeOlho /> Preview
                   </a>
                 )}
-                <button
-                  type="button"
-                  className="botao-preview pronto"
-                  onClick={() =>
-                    editando ? void baixarEditado() : baixarArquivo(resultado.blob, resultado.fileName)
-                  }
-                >
+                <button type="button" className="botao-preview pronto" onClick={aoClicarBaixar}>
                   <IconeDownload /> {editando ? 'Baixar editado' : 'Baixar .zip'}
+                  {!logado && <IconeCadeado />}
                 </button>
               </div>
             ) : (
@@ -484,17 +564,38 @@ export default function App() {
                   sandbox="allow-same-origin"
                   srcDoc={previa.html}
                 />
+              ) : previewSrc ? (
+                <iframe
+                  className="previa-frame"
+                  title="Prévia do clone"
+                  sandbox="allow-same-origin"
+                  src={previewSrc}
+                />
               ) : (
                 <PlaceholderPreview clonando={clonando} />
               )}
             </div>
           </div>
 
+          {resultado && !logado && (
+            <div className="cta-conta">
+              <strong>Gostou?</strong> Crie uma conta grátis para <strong>baixar</strong> o .zip
+              pronto para hospedar e <strong>editar</strong> o clone.
+              <button type="button" className="cta pequeno" onClick={() => abrirLogin()}>
+                Criar conta / Entrar
+              </button>
+            </div>
+          )}
+
           {resultado && (
-            <Resultado clone={resultado} onUsarCheckout={usarCheckout} onUsarPixel={usarPixel} />
+            <Resultado meta={resultado.meta} onUsarCheckout={usarCheckout} onUsarPixel={usarPixel} />
           )}
         </div>
       </div>
+
+      {loginAberto && (
+        <Login onSucesso={aoLogar} onFechar={() => setLoginAberto(false)} motivo={loginMotivo} />
+      )}
     </div>
   );
 }
@@ -648,15 +749,14 @@ function PlaceholderPreview({ clonando }: { clonando: boolean }) {
 }
 
 function Resultado({
-  clone,
+  meta,
   onUsarCheckout,
   onUsarPixel,
 }: {
-  clone: CloneResult;
+  meta: CloneMeta;
   onUsarCheckout: (url: string) => void;
   onUsarPixel: (id: string) => void;
 }) {
-  const { meta } = clone;
   const checkouts = meta.checkouts ?? [];
   const pixels = meta.pixels ?? [];
 
@@ -831,6 +931,15 @@ function IconeLapis() {
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function IconeCadeado() {
+  return (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: 4, opacity: 0.8 }}>
+      <rect x="4" y="11" width="16" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </svg>
   );
 }

@@ -1,7 +1,12 @@
 import { io, type Socket } from 'socket.io-client';
-import type { CloneErrorCode, CloneMeta, CloneResult, LinkRule, PixelRule } from './types';
+import type { CloneErrorCode, CloneMeta, LinkRule, PixelRule } from './types';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
+/** URL da prévia servida pelo backend (aberta, sem login) — usada no iframe do anônimo. */
+export function urlPreview(id: string): string {
+  return `${API_URL}/clone/${id}/preview`;
+}
 
 /** Mensagens que o afiliado entende, no lugar do código cru do backend. */
 const MENSAGEM_POR_CODIGO: Record<CloneErrorCode, string> = {
@@ -14,6 +19,7 @@ const MENSAGEM_POR_CODIGO: Record<CloneErrorCode, string> = {
   RENDER_FAILED: 'Não consegui abrir a página no navegador interno.',
   RATE_LIMIT: 'Você atingiu o limite de clones por agora. Tente de novo mais tarde.',
   NETWORK: 'Não consegui falar com a API. O backend está rodando?',
+  SESSAO: 'Sua sessão expirou. Entre de novo para baixar.',
 };
 
 export class ApiError extends Error {
@@ -67,19 +73,24 @@ function erroDoCorpo(corpo: Record<string, unknown> | null, status: number): Api
   return new ApiError('FETCH_FAILED', detalhe ?? `Erro ${status}`);
 }
 
+export interface CloneInfo {
+  id: string;
+  fileName: string;
+  meta: CloneMeta;
+}
+
 /**
- * A API é assíncrona: enfileira o job, acompanha o progresso (por WebSocket, com polling
- * de reserva) e, quando termina, baixa o zip.
+ * Enfileira o clone e acompanha até terminar (WebSocket, com polling de reserva).
+ * NÃO baixa o zip: o download é separado e exige conta (`baixarZip`). O anônimo vê a prévia
+ * servida pelo backend (`urlPreview`); baixar/editar ficam atrás do login.
  */
 export async function cloneSite(
   params: CloneParams,
   onProgress?: (progress: CloneProgress) => void,
-): Promise<CloneResult> {
+): Promise<CloneInfo> {
   const id = await enfileirar(params);
   const info = await acompanhar(id, onProgress);
-  const blob = await baixarZip(id);
-
-  return { meta: info.meta, blob, fileName: info.fileName };
+  return { id, meta: info.meta, fileName: info.fileName };
 }
 
 interface ResultadoInfo {
@@ -184,13 +195,17 @@ async function acompanharPorPolling(
   throw new ApiError('TIMEOUT', 'O clone demorou mais que o esperado.');
 }
 
-async function baixarZip(id: string): Promise<Blob> {
+/** Baixa o zip. Exige token (o endpoint é protegido). 401 vira erro de sessão. */
+export async function baixarZip(id: string, token: string): Promise<Blob> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}/clone/${id}/download`);
+    response = await fetch(`${API_URL}/clone/${id}/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
   } catch {
     throw new ApiError('NETWORK');
   }
+  if (response.status === 401) throw new ApiError('SESSAO');
   if (!response.ok) throw erroDoCorpo(await lerJson(response), response.status);
   return response.blob();
 }

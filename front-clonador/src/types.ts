@@ -63,4 +63,5 @@ export type CloneErrorCode =
   | 'FETCH_FAILED'
   | 'RENDER_FAILED'
   | 'RATE_LIMIT'
-  | 'NETWORK';
+  | 'NETWORK'
+  | 'SESSAO';
