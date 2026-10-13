@@ -34,11 +34,18 @@ RUN npx playwright install chromium
 # Código já compilado, vindo do estágio de build.
 COPY --from=build /app/dist ./dist
 
-# Client do Prisma já gerado no build (o runtime não tem a CLI do Prisma para gerar).
+# Client do Prisma já gerado no build.
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
+
+# Schema + migrações: o start roda `prisma migrate deploy`, que precisa destes arquivos.
+# (O pacote `prisma`, a CLI, agora é dependency de produção, então está no node_modules.)
+COPY --from=build /app/prisma ./prisma
 
 # O Railway injeta a porta em PORT; o app respeita process.env.PORT (padrão 3000).
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+# Aplica as migrações pendentes e sobe. O migrate NÃO trava o start: se o banco estiver fora,
+# o app sobe mesmo assim (clonar/pré-visualizar seguem livres; só o login fica indisponível até
+# o banco voltar). Mesma filosofia do PrismaService — banco é secundário.
+CMD ["sh", "-c", "npx prisma migrate deploy || echo '[start] migrate deploy falhou — login indisponivel ate o banco voltar'; node dist/main"]
