@@ -33,11 +33,6 @@ export function CloneForm() {
         />
       </label>
 
-      <p className="ajuda">
-        Depois de clonar, você vê a página e aí configura as trocas de link de checkout e de pixel —
-        já sabendo o que ela tem.
-      </p>
-
       <label className="termo">
         <input
           type="checkbox"

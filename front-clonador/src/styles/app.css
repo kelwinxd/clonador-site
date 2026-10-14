@@ -232,12 +232,11 @@ input:focus-visible {
 .botao-ghost {
   align-self: flex-start;
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 9px;
+  text-decoration: none;
   padding: 8px 14px;
   color: var(--orange);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 24px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -763,7 +762,7 @@ summary {
 
 .botao-ghost.pequeno {
   padding: 5px 12px;
-  font-size: 12px;
+  font-size: 16px;
   border-radius: 7px;
 }
 
@@ -861,6 +860,7 @@ summary {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 36px;
   align-items: center;
+  margin-top:30px;
 }
 .painel-form {
   width: 100%;
@@ -873,8 +873,9 @@ summary {
 }
 .clonar-hero img {
   width: 100%;
-  max-width: 520px;
+  max-width: 640px;
   height: auto;
+  margin-top:30px;
   filter: drop-shadow(0 18px 50px rgba(249, 115, 22, 0.18));
 }
 

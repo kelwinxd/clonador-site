@@ -10,8 +10,8 @@ export default function ClonarPage() {
       </p>
       <div className="clonar-grid">
         <CloneForm />
-        <div className="clonar-hero" aria-hidden="true">
-          <img src="/ninja-hero.webp" alt="" />
+        <div className="clonar-hero"  aria-hidden="true">
+          <img src="/ninja-bg.png" alt="" />
         </div>
       </div>
     </>

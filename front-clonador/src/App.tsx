@@ -41,9 +41,9 @@ function Layout() {
               CLONE <span className="brand-ninja">NINJA</span>
             </span>
           </span>
-          <button type="button" className="botao-novo" onClick={() => navigate(ROTAS.clonar)}>
+          {/* <button type="button" className="botao-novo" onClick={() => navigate(ROTAS.clonar)}>
             + Novo clone
-          </button>
+          </button> */}
         </div>
 
         <div className="conta">
