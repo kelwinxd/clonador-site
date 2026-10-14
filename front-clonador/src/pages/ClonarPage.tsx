@@ -1,6 +1,6 @@
 import { CloneForm } from '@/features/clone/components/CloneForm';
 
-/** Página 1: o formulário de clonagem (só endereço + aceite). */
+/** Página 1: formulário à esquerda, imagem do ninja à direita. */
 export default function ClonarPage() {
   return (
     <>
@@ -8,7 +8,12 @@ export default function ClonarPage() {
         Clone uma página autorizada e baixe um <strong>.zip</strong> pronto para hospedar, com o seu
         link no lugar.
       </p>
-      <CloneForm />
+      <div className="clonar-grid">
+        <CloneForm />
+        <div className="clonar-hero" aria-hidden="true">
+          <img src="/ninja-hero.webp" alt="" />
+        </div>
+      </div>
     </>
   );
 }

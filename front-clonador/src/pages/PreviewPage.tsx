@@ -75,10 +75,6 @@ export default function PreviewPage() {
 
   return (
     <div className="resultado-pagina">
-      <div className="resultado-topo">
-        {resultado && <span className="resultado-url">{urlExibida}</span>}
-      </div>
-
       {pronto && (
         <div className="stepper" role="tablist" aria-label="Etapas do resultado">
           <button

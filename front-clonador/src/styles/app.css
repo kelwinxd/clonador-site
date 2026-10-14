@@ -855,10 +855,36 @@ summary {
 
 /* ============ Páginas separadas (router) ============ */
 
-/* Formulário centralizado em coluna única */
+/* Primeira página: formulário à esquerda, imagem à direita */
+.clonar-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 36px;
+  align-items: center;
+}
 .painel-form {
-  max-width: 620px;
-  margin: 0 auto;
+  width: 100%;
+  align-self: start;
+}
+.clonar-hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.clonar-hero img {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  filter: drop-shadow(0 18px 50px rgba(249, 115, 22, 0.18));
+}
+
+@media (max-width: 860px) {
+  .clonar-grid {
+    grid-template-columns: 1fr;
+  }
+  .clonar-hero {
+    display: none;
+  }
 }
 
 /* ---------- Página de resultado ---------- */
