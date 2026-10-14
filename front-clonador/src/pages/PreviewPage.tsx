@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { urlPreview } from '@/features/clone/clone.api';
-import { descreveProgresso, porcentagem } from '@/features/clone/clone.utils';
 import { useClone } from '@/features/clone/CloneContext';
 import { ConfigLinksPixels } from '@/features/clone/components/ConfigLinksPixels';
 import { Deteccao } from '@/features/clone/components/Deteccao';
@@ -31,7 +30,7 @@ export default function PreviewPage() {
 
   const step = params.get('step') === '2' ? 2 : 1;
   const logado = !!sessao;
-  const { resultado, blob, previa, previewUrl, previewSrc, status, progresso, erro } = app;
+  const { resultado, blob, previa, previewUrl, previewSrc, status, erro } = app;
 
   function irParaStep(s: 1 | 2) {
     setParams(s === 2 ? { step: '2' } : {});
@@ -81,20 +80,33 @@ export default function PreviewPage() {
       </div>
 
       {pronto && (
-        <div className="steps" role="tablist" aria-label="Etapas do resultado">
+        <div className="stepper" role="tablist" aria-label="Etapas do resultado">
           <button
             type="button"
-            className={`step ${step === 1 ? 'ativo' : ''}`}
+            role="tab"
+            aria-selected={step === 1}
+            className={`stepper-item ${step > 1 ? 'feito' : step === 1 ? 'atual' : 'futuro'}`}
             onClick={() => irParaStep(1)}
           >
-            <span className="step-num">1</span> Prévia
+            <span className="stepper-circulo">
+              {step > 1 ? '✓' : <span className="stepper-dot" />}
+            </span>
+            <span className="stepper-label">Prévia</span>
           </button>
+
+          <span className={`stepper-linha ${step >= 2 ? 'feita' : ''}`} aria-hidden="true" />
+
           <button
             type="button"
-            className={`step ${step === 2 ? 'ativo' : ''}`}
+            role="tab"
+            aria-selected={step === 2}
+            className={`stepper-item ${step === 2 ? 'atual' : 'futuro'}`}
             onClick={() => irParaStep(2)}
           >
-            <span className="step-num">2</span> Configurar trocas
+            <span className="stepper-circulo">
+              <span className="stepper-dot" />
+            </span>
+            <span className="stepper-label">Configurar trocas</span>
           </button>
         </div>
       )}
@@ -170,26 +182,14 @@ export default function PreviewPage() {
               <div className="url-pill">{urlExibida}</div>
             </div>
             <div className="viewport">
-              {clonando && (
-                <div className="viewport-progresso">
-                  <div className="barra">
-                    {porcentagem(progresso) == null ? (
-                      <div className="barra-fill indeterminada" />
-                    ) : (
-                      <div className="barra-fill" style={{ width: `${porcentagem(progresso)}%` }} />
-                    )}
-                  </div>
-                  <span>{descreveProgresso(progresso)}</span>
-                </div>
-              )}
-              {!clonando && previa ? (
+              {previa ? (
                 <iframe
                   className="previa-frame"
                   title="Prévia do clone"
                   sandbox="allow-same-origin"
                   srcDoc={previa.html}
                 />
-              ) : !clonando && previewSrc ? (
+              ) : previewSrc ? (
                 <iframe
                   className="previa-frame"
                   title="Prévia do clone"
@@ -197,7 +197,7 @@ export default function PreviewPage() {
                   src={previewSrc}
                 />
               ) : (
-                !clonando && <PlaceholderPreview clonando={false} />
+                <PlaceholderPreview clonando={clonando} />
               )}
             </div>
           </div>

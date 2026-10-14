@@ -1058,49 +1058,77 @@ summary {
   background: rgba(249, 115, 22, 0.1);
 }
 
-/* ============ Steps do resultado ============ */
-.steps {
+/* ============ Stepper (bolinhas) do resultado ============ */
+.stepper {
   display: flex;
-  gap: 8px;
-}
-.step {
-  flex: 1;
-  display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 8px;
-  background: var(--panel);
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  padding: 10px 14px;
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
+  padding: 8px 0 4px;
+}
+.stepper-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  width: 130px;
+  background: none;
+  border: 0;
+  padding: 0;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  font-family: inherit;
 }
-.step:hover {
-  border-color: var(--orange);
-}
-.step.ativo {
-  border-color: var(--orange);
-  color: var(--text);
-  background: rgba(249, 115, 22, 0.08);
-}
-.step-num {
+.stepper-circulo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--border);
-  color: var(--text);
-  font-size: 12px;
+  background: var(--inner);
+  border: 2px solid var(--border);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
-.step.ativo .step-num {
+.stepper-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+.stepper-item.atual .stepper-circulo {
   background: var(--orange);
-  color: #0e1520;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 4px var(--orange-glow);
+}
+.stepper-item.atual .stepper-dot {
+  background: #fff;
+}
+.stepper-item.feito .stepper-circulo {
+  background: var(--orange);
+  border-color: var(--orange);
+}
+.stepper-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.stepper-item.atual .stepper-label {
+  color: var(--orange);
+}
+.stepper-item.feito .stepper-label {
+  color: var(--text);
+}
+.stepper-linha {
+  flex: 1;
+  max-width: 170px;
+  height: 2px;
+  margin-top: 17px;
+  background: var(--border);
+  transition: background 0.2s;
+}
+.stepper-linha.feita {
+  background: var(--orange);
 }
 
 .painel-config {

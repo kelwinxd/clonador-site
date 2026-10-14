@@ -3,6 +3,7 @@ import './styles/app.css';
 import './styles/auth.css';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { CloneProvider } from '@/features/clone/CloneContext';
+import { OverlayClonando } from '@/features/clone/components/OverlayClonando';
 import { ROTAS } from '@/shared/constants';
 import ClonarPage from './pages/ClonarPage';
 import CriarContaPage from './pages/CriarContaPage';
@@ -28,6 +29,8 @@ function Layout() {
 
   return (
     <div className="app">
+      <OverlayClonando />
+
       <header className="topbar">
         <div className="topbar-esq">
           <span className="brand">
