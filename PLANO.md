@@ -93,8 +93,15 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       e-mail/Sair. O clone não baixa mais sozinho: logado baixa o zip (same-origin, com editor);
       anônimo vê a prévia do backend e um CTA, com baixar/editar atrás do login. Validado ponta a
       ponta no navegador (anônimo → prévia servida; cadastro → download 200 + editor). **Falta
-      só:** a cota por plano, e ligar Postgres + JWT_SECRET em produção (Railway).
-- [ ] **Etapa 16** — cobrança com Stripe.
+      só:** a cota por plano. **Login no ar FEITO** (Postgres no Railway + `DATABASE_URL`/`JWT_SECRET`;
+      migração roda sozinha no start via Dockerfile).
+- **Ajuste de UX (navegação em páginas):** o front virou SPA com `react-router` e estado
+      compartilhado (`state.tsx`). Páginas separadas: `/` (formulário), `/resultado` (prévia +
+      ações + editor, com a **detecção de checkout/pixels em destaque na primeira dobra**),
+      `/criar-conta` (cadastro + escolha de plano) e `/entrar`. "Baixar/Editar" como anônimo
+      leva para `/criar-conta`. Sem campos de cartão crus — pagamento via Stripe fica na Etapa 16.
+- [ ] **Etapa 16** — cobrança com Stripe (captura de cartão por Stripe Elements/Checkout; o
+      número nunca passa pelo nosso servidor). Liga no botão de plano Pro da página de criar conta.
 - [ ] **Etapa 17** — deploy de 1 clique na conta Vercel do usuário.
 - [ ] **Etapa 18** — escala: worker separado da API, pool de navegadores, métricas.
 
