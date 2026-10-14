@@ -1,25 +1,24 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthError, registrar } from '../auth';
-import { useApp } from '../state';
-import '../Login.css';
+import { AuthError } from '@/features/auth/auth.api';
+import type { PlanoId } from '@/features/auth/auth.types';
+import { useAuth } from '@/features/auth/AuthContext';
+import { CamposConta } from '@/features/auth/components/CamposConta';
+import { PlanoSelector } from '@/features/auth/components/PlanoSelector';
+import { useClone } from '@/features/clone/CloneContext';
+import { ROTAS } from '@/shared/constants';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Plano = 'free' | 'pro';
-
-/**
- * Página de criação de conta: e-mail/senha + escolha de plano. A captura de cartão (plano Pro)
- * entra na Etapa 16 via Stripe — o número do cartão nunca passa pelo nosso servidor, por isso
- * NÃO há campos de cartão crus aqui.
- */
+/** Criação de conta: e-mail/senha + plano. Pagamento do Pro entra na Etapa 16 (Stripe). */
 export default function CriarContaPage() {
-  const app = useApp();
+  const { registrar } = useAuth();
+  const { resultado } = useClone();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [plano, setPlano] = useState<Plano>('free');
+  const [plano, setPlano] = useState<PlanoId>('free');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -31,10 +30,8 @@ export default function CriarContaPage() {
     setErro(null);
     setEnviando(true);
     try {
-      const sessao = await registrar(email.trim(), senha);
-      app.entrarComSessao(sessao);
-      // Volta para onde dá para usar a conta: a prévia (destrava o download) ou o formulário.
-      navigate(app.resultado ? '/resultado' : '/');
+      await registrar(email.trim(), senha);
+      navigate(resultado ? ROTAS.resultado : ROTAS.clonar);
     } catch (problema) {
       setErro(problema instanceof AuthError ? problema.message : 'Algo deu errado. Tente de novo.');
     } finally {
@@ -55,59 +52,24 @@ export default function CriarContaPage() {
         </div>
         <p className="login-sub">Crie sua conta para baixar e editar seus clones.</p>
 
-        <label className="campo">
-          <span className="rotulo">E-mail</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (erro) setErro(null);
-            }}
-            placeholder="voce@exemplo.com"
-            autoComplete="email"
-            required
-          />
-        </label>
+        <CamposConta
+          email={email}
+          senha={senha}
+          onEmail={(v) => {
+            setEmail(v);
+            if (erro) setErro(null);
+          }}
+          onSenha={setSenha}
+          senhaPlaceholder="pelo menos 6 caracteres"
+          novaSenha
+        />
 
-        <label className="campo">
-          <span className="rotulo">Senha</span>
-          <input
-            type="password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            placeholder="pelo menos 6 caracteres"
-            autoComplete="new-password"
-            required
-          />
-        </label>
-
-        <div className="rotulo">Plano</div>
-        <div className="planos">
-          <button
-            type="button"
-            className={`plano ${plano === 'free' ? 'ativo' : ''}`}
-            onClick={() => setPlano('free')}
-          >
-            <span className="plano-nome">Grátis</span>
-            <span className="plano-preco">R$ 0</span>
-            <span className="plano-desc">Clones com marca d'água e limite diário.</span>
-          </button>
-          <button
-            type="button"
-            className={`plano ${plano === 'pro' ? 'ativo' : ''}`}
-            onClick={() => setPlano('pro')}
-          >
-            <span className="plano-badge">Pro</span>
-            <span className="plano-preco">R$ 29<small>/mês</small></span>
-            <span className="plano-desc">Clones ilimitados, sem marca d'água, editor completo.</span>
-          </button>
-        </div>
+        <PlanoSelector selecionado={plano} onSelecionar={setPlano} />
 
         {plano === 'pro' && (
           <p className="ajuda plano-aviso">
-            💳 O pagamento com cartão será feito pelo Stripe (em breve). Por enquanto a conta é
-            criada no plano grátis e você faz o upgrade depois.
+            💳 O pagamento com cartão será feito pelo Stripe (em breve). Por enquanto a conta é criada
+            no plano grátis e você faz o upgrade depois.
           </p>
         )}
 
@@ -118,7 +80,7 @@ export default function CriarContaPage() {
         </button>
 
         <p className="login-rodape">
-          Já tem conta? <Link to="/entrar">Entrar</Link>
+          Já tem conta? <Link to={ROTAS.entrar}>Entrar</Link>
         </p>
       </form>
     </div>

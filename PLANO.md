@@ -95,11 +95,15 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       ponta no navegador (anônimo → prévia servida; cadastro → download 200 + editor). **Falta
       só:** a cota por plano. **Login no ar FEITO** (Postgres no Railway + `DATABASE_URL`/`JWT_SECRET`;
       migração roda sozinha no start via Dockerfile).
-- **Ajuste de UX (navegação em páginas):** o front virou SPA com `react-router` e estado
-      compartilhado (`state.tsx`). Páginas separadas: `/` (formulário), `/resultado` (prévia +
-      ações + editor, com a **detecção de checkout/pixels em destaque na primeira dobra**),
-      `/criar-conta` (cadastro + escolha de plano) e `/entrar`. "Baixar/Editar" como anônimo
-      leva para `/criar-conta`. Sem campos de cartão crus — pagamento via Stripe fica na Etapa 16.
+- **Ajuste de UX + refactor (feature-based):** o front foi reorganizado em
+      `shared/` (constants, utils, `api/client`+`api/errors`, `ui/`) e `features/`
+      (auth, clone, editor, preview) com tipos por feature, API centralizada (nada de `fetch`
+      solto nem URL exposta), hooks (`useAuth`, `useClone`, `useEditor`) e alias `@/`. Páginas:
+      `/` (só URL + aceite — links/pixels saíram daqui), `/resultado` com **steps** na URL
+      (`?step=1` prévia / `?step=2` configurar trocas — configurar depois de ver a detecção),
+      `/editor` (edição em **tela cheia**, estilo Elementor), `/criar-conta` (cadastro + plano) e
+      `/entrar`. Header com botão **"+ Novo clone"**; título sem estilo de link. Pagamento via
+      Stripe fica na Etapa 16.
 - [ ] **Etapa 16** — cobrança com Stripe (captura de cartão por Stripe Elements/Checkout; o
       número nunca passa pelo nosso servidor). Liga no botão de plano Pro da página de criar conta.
 - [ ] **Etapa 17** — deploy de 1 clique na conta Vercel do usuário.

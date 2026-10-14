@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthError, entrar } from '../auth';
-import { useApp } from '../state';
-import '../Login.css';
+import { AuthError } from '@/features/auth/auth.api';
+import { useAuth } from '@/features/auth/AuthContext';
+import { CamposConta } from '@/features/auth/components/CamposConta';
+import { useClone } from '@/features/clone/CloneContext';
+import { ROTAS } from '@/shared/constants';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Página de login. Login é opcional no app; aqui é o acesso de quem já tem conta. */
+/** Login de quem já tem conta. */
 export default function EntrarPage() {
-  const app = useApp();
+  const { entrar } = useAuth();
+  const { resultado } = useClone();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -24,9 +27,8 @@ export default function EntrarPage() {
     setErro(null);
     setEnviando(true);
     try {
-      const sessao = await entrar(email.trim(), senha);
-      app.entrarComSessao(sessao);
-      navigate(app.resultado ? '/resultado' : '/');
+      await entrar(email.trim(), senha);
+      navigate(resultado ? ROTAS.resultado : ROTAS.clonar);
     } catch (problema) {
       setErro(problema instanceof AuthError ? problema.message : 'Algo deu errado. Tente de novo.');
     } finally {
@@ -47,32 +49,15 @@ export default function EntrarPage() {
         </div>
         <p className="login-sub">Entre para baixar e editar seus clones.</p>
 
-        <label className="campo">
-          <span className="rotulo">E-mail</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (erro) setErro(null);
-            }}
-            placeholder="voce@exemplo.com"
-            autoComplete="email"
-            required
-          />
-        </label>
-
-        <label className="campo">
-          <span className="rotulo">Senha</span>
-          <input
-            type="password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            placeholder="sua senha"
-            autoComplete="current-password"
-            required
-          />
-        </label>
+        <CamposConta
+          email={email}
+          senha={senha}
+          onEmail={(v) => {
+            setEmail(v);
+            if (erro) setErro(null);
+          }}
+          onSenha={setSenha}
+        />
 
         {erro && <span className="campo-erro">{erro}</span>}
 
@@ -81,7 +66,7 @@ export default function EntrarPage() {
         </button>
 
         <p className="login-rodape">
-          Ainda não tem conta? <Link to="/criar-conta">Criar conta</Link>
+          Ainda não tem conta? <Link to={ROTAS.criarConta}>Criar conta</Link>
         </p>
       </form>
     </div>

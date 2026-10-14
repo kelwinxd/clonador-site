@@ -1,55 +1,70 @@
 import { Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import './App.css';
-import { AppProvider, useApp } from './state';
+import './styles/app.css';
+import './styles/auth.css';
+import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
+import { CloneProvider } from '@/features/clone/CloneContext';
+import { ROTAS } from '@/shared/constants';
 import ClonarPage from './pages/ClonarPage';
-import PreviewPage from './pages/PreviewPage';
 import CriarContaPage from './pages/CriarContaPage';
+import EditorPage from './pages/EditorPage';
 import EntrarPage from './pages/EntrarPage';
+import PreviewPage from './pages/PreviewPage';
 
-/** Raiz do app: provê o estado compartilhado e monta o layout com as rotas. */
+/** Raiz: compõe os provedores (auth → clone) e monta o layout com as rotas. */
 export default function App() {
   return (
-    <AppProvider>
-      <Layout />
-    </AppProvider>
+    <AuthProvider>
+      <CloneProvider>
+        <Layout />
+      </CloneProvider>
+    </AuthProvider>
   );
 }
 
 function Layout() {
-  const app = useApp();
+  const { sessao, logout } = useAuth();
   const navigate = useNavigate();
-  const logado = !!app.sessao;
+  const inicial = sessao?.email?.[0]?.toUpperCase() ?? '?';
 
   return (
     <div className="app">
       <header className="topbar">
-        <Link to="/" className="brand" aria-label="Início">
-          <span className="logo">
-            <img src="/logo.png" alt="" width="60" height="60" />
+        <div className="topbar-esq">
+          <span className="brand">
+            <span className="logo">
+              <img src="/logo.png" alt="" width="60" height="60" />
+            </span>
+            <span className="brand-nome">
+              CLONE <span className="brand-ninja">NINJA</span>
+            </span>
           </span>
-          <span className="brand-nome">
-            CLONE <span className="brand-ninja">NINJA</span>
-          </span>
-        </Link>
+          <button type="button" className="botao-novo" onClick={() => navigate(ROTAS.clonar)}>
+            + Novo clone
+          </button>
+        </div>
+
         <div className="conta">
-          {logado ? (
+          {sessao ? (
             <>
-              <span className="conta-email" title={app.sessao!.email}>
-                {app.sessao!.email}
+              <span className="avatar" aria-hidden="true">
+                {inicial}
+              </span>
+              <span className="conta-email" title={sessao.email}>
+                {sessao.email}
               </span>
               <button
                 type="button"
                 className="botao-ghost pequeno"
                 onClick={() => {
-                  app.logout();
-                  navigate('/');
+                  logout();
+                  navigate(ROTAS.clonar);
                 }}
               >
                 Sair
               </button>
             </>
           ) : (
-            <Link to="/entrar" className="botao-ghost pequeno">
+            <Link to={ROTAS.entrar} className="botao-ghost pequeno">
               Entrar
             </Link>
           )}
@@ -57,11 +72,12 @@ function Layout() {
       </header>
 
       <Routes>
-        <Route path="/" element={<ClonarPage />} />
-        <Route path="/resultado" element={<PreviewPage />} />
-        <Route path="/criar-conta" element={<CriarContaPage />} />
-        <Route path="/entrar" element={<EntrarPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path={ROTAS.clonar} element={<ClonarPage />} />
+        <Route path={ROTAS.resultado} element={<PreviewPage />} />
+        <Route path={ROTAS.editor} element={<EditorPage />} />
+        <Route path={ROTAS.criarConta} element={<CriarContaPage />} />
+        <Route path={ROTAS.entrar} element={<EntrarPage />} />
+        <Route path="*" element={<Navigate to={ROTAS.clonar} replace />} />
       </Routes>
     </div>
   );

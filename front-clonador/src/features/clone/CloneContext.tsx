@@ -1,28 +1,18 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import {
-  ApiError,
-  baixarZip,
-  cloneSite,
-  urlPreview,
-  type CloneInfo,
-  type CloneProgress,
-} from './api';
-import { sair, sessaoAtual, type Sessao } from './auth';
-import { montarHtmlAutonomo, montarPreview, type Preview } from './preview';
-import type { LinkRule, PixelRule } from './types';
+import { useAuth } from '@/features/auth/AuthContext';
+import { montarHtmlAutonomo, montarPreview, type Preview } from '@/features/preview/preview';
+import { ApiError } from '@/shared/api/errors';
+import { baixarZip, cloneSite, urlPreview } from './clone.api';
+import type { CloneInfo, CloneProgress, LinkRule, PixelRule } from './clone.types';
 
 export type Status = 'parado' | 'clonando' | 'pronto' | 'erro';
 
 /**
- * Estado compartilhado entre as páginas (formulário, prévia, conta). Mora acima das rotas,
- * então o clone feito na página do formulário continua disponível na página da prévia, e o
- * login sobrevive à navegação. Centraliza também o fluxo assíncrono do clone.
+ * Estado do clone, compartilhado entre a página do formulário e a da prévia. Guarda os campos
+ * do formulário (para o re-clone com link/pixel pré-preenchido) e o resultado. Reage ao login:
+ * ao entrar, baixa o zip (prévia same-origin + editor); ao sair, volta para a prévia do backend.
  */
-interface AppState {
-  sessao: Sessao | null;
-  entrarComSessao: (s: Sessao) => void;
-  logout: () => void;
-
+interface CloneState {
   // Formulário
   url: string;
   setUrl: (v: string) => void;
@@ -44,21 +34,20 @@ interface AppState {
   erro: string | null;
 
   iniciarClone: () => void;
-  carregarZip: (id: string, token: string) => Promise<void>;
   usarCheckout: (url: string) => void;
   usarPixel: (id: string) => void;
 }
 
-const Ctx = createContext<AppState | null>(null);
+const Ctx = createContext<CloneState | null>(null);
 
-export function useApp(): AppState {
+export function useClone(): CloneState {
   const ctx = useContext(Ctx);
-  if (!ctx) throw new Error('useApp fora do AppProvider');
+  if (!ctx) throw new Error('useClone fora do CloneProvider');
   return ctx;
 }
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [sessao, setSessao] = useState<Sessao | null>(() => sessaoAtual());
+export function CloneProvider({ children }: { children: ReactNode }) {
+  const { sessao } = useAuth();
 
   const [url, setUrl] = useState('');
   const [links, setLinks] = useState<LinkRule[]>([{ from: '', to: '' }]);
@@ -79,12 +68,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Libera os endereços temporários da prévia quando trocam.
   useEffect(() => {
-    if (previaAnterior.current && previaAnterior.current !== previa) {
-      previaAnterior.current.descartar();
-    }
+    if (previaAnterior.current && previaAnterior.current !== previa) previaAnterior.current.descartar();
     previaAnterior.current = previa;
   }, [previa]);
-
   useEffect(() => {
     if (previewUrlAnterior.current && previewUrlAnterior.current !== previewUrl) {
       URL.revokeObjectURL(previewUrlAnterior.current);
@@ -94,15 +80,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function carregarZip(id: string, token: string) {
     const zip = await baixarZip(id, token);
-    const [previaObj, htmlAutonomo] = await Promise.all([
-      montarPreview(zip),
-      montarHtmlAutonomo(zip),
-    ]);
+    const [previaObj, htmlAutonomo] = await Promise.all([montarPreview(zip), montarHtmlAutonomo(zip)]);
     setBlob(zip);
     setPrevia(previaObj);
     setPreviewSrc(null);
     setPreviewUrl(URL.createObjectURL(new Blob([htmlAutonomo], { type: 'text/html' })));
   }
+
+  // Reage ao login/logout enquanto há um clone na tela.
+  useEffect(() => {
+    if (!resultado) return;
+    if (sessao && !blob && status === 'pronto') {
+      carregarZip(resultado.id, sessao.token).catch(() =>
+        setErro('Entrou, mas não consegui preparar o download. Tente clonar de novo.'),
+      );
+    } else if (!sessao && (blob || previa)) {
+      setBlob(null);
+      setPrevia(null);
+      setPreviewSrc(urlPreview(resultado.id));
+    }
+    // Só quando a sessão muda: evita laço ao setar blob/prévia aqui dentro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessao]);
 
   function iniciarClone() {
     setStatus('clonando');
@@ -137,24 +136,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })();
   }
 
-  function entrarComSessao(nova: Sessao) {
-    setSessao(nova);
-    // Se há um clone anônimo pronto, destrava o zip (prévia same-origin + editor).
-    if (resultado && !blob) {
-      carregarZip(resultado.id, nova.token).catch(() =>
-        setErro('Entrou, mas não consegui preparar o download. Tente clonar de novo.'),
-      );
-    }
-  }
-
-  function logout() {
-    sair();
-    setSessao(null);
-    setBlob(null);
-    setPrevia(null);
-    if (resultado) setPreviewSrc(urlPreview(resultado.id));
-  }
-
   function usarCheckout(checkoutUrl: string) {
     setLinks((atual) => {
       if (atual.some((l) => l.from.trim() === checkoutUrl)) return atual;
@@ -163,7 +144,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return [...atual, { from: checkoutUrl, to: '' }];
     });
   }
-
   function usarPixel(pixelId: string) {
     setPixels((atual) => {
       if (atual.some((p) => p.from.trim() === pixelId)) return atual;
@@ -173,10 +153,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  const valor: AppState = {
-    sessao,
-    entrarComSessao,
-    logout,
+  const valor: CloneState = {
     url,
     setUrl,
     links,
@@ -194,7 +171,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     previewSrc,
     erro,
     iniciarClone,
-    carregarZip,
     usarCheckout,
     usarPixel,
   };
