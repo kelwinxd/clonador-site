@@ -67,4 +67,9 @@ export class CloneRequestDto {
   @IsBoolean()
   @Equals(true, { message: 'É preciso aceitar o termo de uso' })
   acceptedTerms!: boolean;
+
+  /** Token do reCAPTCHA v3 gerado no front ao clicar em clonar (anti-spam). */
+  @IsOptional()
+  @IsString()
+  captchaToken?: string;
 }

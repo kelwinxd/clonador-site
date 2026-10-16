@@ -108,6 +108,22 @@ export const AUTH = {
   expiresInSeconds: Number(process.env.JWT_EXPIRES_IN_S ?? 7 * 24 * 60 * 60),
 } as const;
 
+/**
+ * reCAPTCHA (anti-spam no POST /clone). Opcional: sem o secret, a verificação é pulada
+ * (desenvolvimento). Em produção, defina RECAPTCHA_SECRET para exigir o token do front.
+ */
+export const RECAPTCHA = {
+  secret: process.env.RECAPTCHA_SECRET?.trim() || '',
+  /** Nota mínima do reCAPTCHA v3 (0..1) para aceitar. Abaixo disso é tratado como robô. */
+  minScore: Number(process.env.RECAPTCHA_MIN_SCORE ?? 0.5),
+} as const;
+
+/**
+ * Máximo de clones por IP ao mesmo tempo (na fila ou rodando). Protege de rajadas/abuso,
+ * além do limite por hora (@nestjs/throttler). Contador fica no Redis com TTL de segurança.
+ */
+export const IP_MAX_CONCURRENT = Number(process.env.IP_MAX_CONCURRENT ?? 2);
+
 /** User-Agent de navegador real: muitas páginas recusam clientes sem isso. */
 export const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';

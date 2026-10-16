@@ -8,7 +8,9 @@ import { CloneRepository } from './clone.repository';
 import { CloneService } from './clone.service';
 import { CloneWorker } from './clone.worker';
 import { HistoryController } from './history.controller';
+import { IpGuardService } from './ip-guard.service';
 import { cloneQueueProvider } from './queue.provider';
+import { RecaptchaService } from './recaptcha.service';
 import { ResultStore } from './result-store';
 
 @Module({
@@ -22,6 +24,8 @@ import { ResultStore } from './result-store';
     CloneGateway,
     CloneRepository,
     PrismaService,
+    RecaptchaService,
+    IpGuardService,
     cloneQueueProvider,
   ],
   exports: [CloneService],

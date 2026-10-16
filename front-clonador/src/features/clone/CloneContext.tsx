@@ -4,6 +4,7 @@ import { montarHtmlAutonomo, montarPreview, type Preview } from '@/features/prev
 import { ApiError } from '@/shared/api/errors';
 import { baixarZip, cloneSite, urlPreview } from './clone.api';
 import type { CloneInfo, CloneProgress, LinkRule, PixelRule } from './clone.types';
+import { obterTokenRecaptcha } from './recaptcha';
 
 export type Status = 'parado' | 'clonando' | 'pronto' | 'erro';
 
@@ -115,12 +116,14 @@ export function CloneProvider({ children }: { children: ReactNode }) {
 
     void (async () => {
       try {
+        const captchaToken = await obterTokenRecaptcha('clone');
         const clone = await cloneSite(
           {
             url: url.trim(),
             acceptedTerms: termos,
             links: links.filter((l) => l.from.trim() && l.to.trim()),
             pixels: pixels.filter((p) => p.from.trim() && p.to.trim()),
+            captchaToken,
           },
           setProgresso,
         );

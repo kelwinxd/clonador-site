@@ -60,6 +60,8 @@ export interface CloneJobData {
   links?: LinkRule[];
   pixels?: PixelRule[];
   forceRender?: boolean;
+  /** IP de quem pediu, para liberar a vaga de concorrência ao terminar. */
+  ip?: string;
 }
 
 /** Etapas do clone, na ordem em que acontecem. */

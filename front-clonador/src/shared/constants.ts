@@ -3,6 +3,9 @@
 /** Base da API. Vem do ambiente (Vercel); cai no localhost em desenvolvimento. */
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
+/** Site key do reCAPTCHA v3 (público). Vazio = reCAPTCHA desligado (dev). */
+export const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY ?? '';
+
 /** Chaves do localStorage, num lugar só para não espalhar strings mágicas. */
 export const STORAGE_KEYS = {
   SESSAO: 'cn_sessao',

@@ -63,6 +63,8 @@ export interface CloneParams {
   pixels: PixelRule[];
   acceptedTerms: boolean;
   forceRender?: boolean;
+  /** Token do reCAPTCHA v3 (anti-spam); undefined quando o reCAPTCHA está desligado. */
+  captchaToken?: string;
 }
 
 /** Resultado de um clone concluído (sem o zip — o download é separado). */

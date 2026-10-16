@@ -9,13 +9,14 @@ import {
   NotFoundException,
   Param,
   Post,
+  Req,
   Res,
   ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { Queue } from 'bullmq';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { QUEUE } from '../config';
 import { CloneRequestDto } from './dto/clone-request.dto';
@@ -23,6 +24,8 @@ import { CloneJobData, CloneJobResult, CloneProgress } from './types';
 import { parseFailedReason } from './clone.worker';
 import { CLONE_QUEUE } from './queue.provider';
 import { CloneErrorCode } from './engine/types';
+import { IpGuardService } from './ip-guard.service';
+import { RecaptchaService } from './recaptcha.service';
 import { ResultStore } from './result-store';
 
 const STATUS_BY_CODE: Record<CloneErrorCode | 'UNKNOWN', HttpStatus> = {
@@ -57,24 +60,46 @@ export class CloneController {
   constructor(
     @Inject(CLONE_QUEUE) private readonly queue: Queue<CloneJobData>,
     private readonly resultStore: ResultStore,
+    private readonly recaptcha: RecaptchaService,
+    private readonly ipGuard: IpGuardService,
   ) {}
 
   // Limite de taxa só aqui (o clone é o caro). Status e download ficam livres.
   @UseGuards(ThrottlerGuard)
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
-  async enqueue(@Body() body: CloneRequestDto): Promise<{ id: string }> {
+  async enqueue(@Body() body: CloneRequestDto, @Req() req: Request): Promise<{ id: string }> {
+    const ip = req.ip ?? 'desconhecido';
+
+    // 1. Anti-robô: valida o token do reCAPTCHA (pulado se o reCAPTCHA estiver desligado).
+    if (!(await this.recaptcha.verificar(body.captchaToken, ip))) {
+      throw new HttpException(
+        { code: 'CAPTCHA', message: 'Verificação anti-robô falhou. Recarregue a página e tente de novo.' },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    // 2. Concorrência por IP: no máximo N clones em andamento por IP ao mesmo tempo.
+    if (!(await this.ipGuard.entrar(ip))) {
+      throw new HttpException(
+        { code: 'RATE_LIMIT', message: 'Você já tem clones em andamento. Espere terminar antes de pedir outro.' },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     let job;
     try {
       job = await this.queue.add(
         'clone',
-        { url: body.url, links: body.links, pixels: body.pixels, forceRender: body.forceRender },
+        { url: body.url, links: body.links, pixels: body.pixels, forceRender: body.forceRender, ip },
         {
           removeOnComplete: { count: QUEUE.keepCompleted },
           removeOnFail: { count: QUEUE.keepFailed },
         },
       );
     } catch {
+      // Não entrou na fila: devolve a vaga de concorrência que acabei de ocupar.
+      await this.ipGuard.sair(ip);
       throw new ServiceUnavailableException('A fila está indisponível. O Redis está rodando?');
     }
     return { id: String(job.id) };

@@ -7,6 +7,7 @@ import { CloneErrorCode } from './engine/types';
 import { CloneJobData, CloneJobResult, SerializedError } from './types';
 import { redisConnection } from './queue.provider';
 import { CloneRepository } from './clone.repository';
+import { IpGuardService } from './ip-guard.service';
 import { ResultStore } from './result-store';
 
 /**
@@ -24,8 +25,9 @@ export class CloneWorker implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly cloneService: CloneService,
     private readonly resultStore: ResultStore,
-    // Opcional: nos testes o worker é montado na mão, sem banco. Em produção o Nest injeta.
+    // Opcionais: nos testes o worker é montado na mão. Em produção o Nest injeta.
     @Optional() private readonly history?: CloneRepository,
+    @Optional() private readonly ipGuard?: IpGuardService,
   ) {}
 
   onModuleInit(): void {
@@ -78,6 +80,9 @@ export class CloneWorker implements OnModuleInit, OnModuleDestroy {
       });
       // Guarda o código no failedReason (string), para o status traduzir para o usuário.
       throw new Error(JSON.stringify(falha));
+    } finally {
+      // Libera a vaga de concorrência do IP, concluído ou falhado.
+      await this.ipGuard?.sair(job.data.ip);
     }
   }
 }
