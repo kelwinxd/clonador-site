@@ -43,6 +43,16 @@ export default function EditorPage() {
       </div>
     );
   }
+  if (sessao.plano !== 'pro') {
+    return (
+      <div className="painel aviso-vazio">
+        <p>✨ O editor é exclusivo do plano Pro.</p>
+        <button type="button" className="cta pequeno" onClick={() => navigate(ROTAS.resultado)}>
+          Voltar
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="editor-pagina">

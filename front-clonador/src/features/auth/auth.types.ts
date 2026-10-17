@@ -3,6 +3,8 @@
 export interface Sessao {
   token: string;
   email: string;
+  /** Plano do usuário: 'free' (marca d'água, sem editor) ou 'pro'. */
+  plano: string;
 }
 
 export type PlanoId = 'free' | 'pro';

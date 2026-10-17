@@ -8,6 +8,7 @@ import { JwtPayload } from './auth.service';
 export interface UsuarioAutenticado {
   userId: string;
   email: string;
+  plano: string;
 }
 
 /**
@@ -25,6 +26,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   validate(payload: JwtPayload): UsuarioAutenticado {
-    return { userId: payload.sub, email: payload.email };
+    return { userId: payload.sub, email: payload.email, plano: payload.plano ?? 'free' };
   }
 }

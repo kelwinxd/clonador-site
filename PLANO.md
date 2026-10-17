@@ -104,8 +104,13 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       `/editor` (edição em **tela cheia**, estilo Elementor), `/criar-conta` (cadastro + plano) e
       `/entrar`. Header com botão **"+ Novo clone"**; título sem estilo de link. Pagamento via
       Stripe fica na Etapa 16.
+- [~] **Cota/plano (parte da Etapa 15):** campo `plano` ('free'/'pro') no `User`. **Free** baixa
+      o zip COM marca d'água (selo injetado no `index.html` no download, via `watermark.ts`) e
+      **não** tem editor; **Pro** baixa limpo e tem editor. O JWT carrega o plano; o front trava o
+      botão Editar (cadeado) e mostra o upsell. **Vira Pro** só manualmente por enquanto (UPDATE no
+      banco) — a cobrança automática é a Etapa 16. Falta a **cota de quantidade** (X clones/dia).
 - [ ] **Etapa 16** — cobrança com Stripe (captura de cartão por Stripe Elements/Checkout; o
-      número nunca passa pelo nosso servidor). Liga no botão de plano Pro da página de criar conta.
+      número nunca passa pelo nosso servidor). Liga no botão de plano Pro e seta `plano='pro'`.
 - [ ] **Etapa 17** — deploy de 1 clique na conta Vercel do usuário.
 - [ ] **Etapa 18** — escala: worker separado da API, pool de navegadores, métricas.
 

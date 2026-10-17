@@ -1202,3 +1202,14 @@ summary {
   height: 100%;
   color: var(--text-dim);
 }
+
+/* Aviso de recurso Pro (editor) */
+.aviso-pro {
+  margin-top: 10px;
+  padding: 11px 14px;
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid var(--orange);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text);
+}

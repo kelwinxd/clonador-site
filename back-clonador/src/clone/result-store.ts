@@ -58,6 +58,15 @@ export class ResultStore implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /** Zip inteiro em memória (usado para injetar a marca d'água no download do Free). */
+  async readZip(jobId: string): Promise<Buffer | null> {
+    try {
+      return await readFile(this.zipPath(jobId));
+    } catch {
+      return null;
+    }
+  }
+
   async exists(jobId: string): Promise<boolean> {
     try {
       await stat(this.zipPath(jobId));

@@ -124,6 +124,14 @@ export const RECAPTCHA = {
  */
 export const IP_MAX_CONCURRENT = Number(process.env.IP_MAX_CONCURRENT ?? 2);
 
+/**
+ * Marca d'água dos clones do plano grátis. O download do Free leva um selo com link; o Pro
+ * sai limpo. A URL do selo aponta de volta para o app (vira propaganda).
+ */
+export const WATERMARK = {
+  url: process.env.WATERMARK_URL?.trim() || 'https://clonador-site-olive.vercel.app',
+} as const;
+
 /** User-Agent de navegador real: muitas páginas recusam clientes sem isso. */
 export const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';

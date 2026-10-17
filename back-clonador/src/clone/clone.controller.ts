@@ -18,7 +18,9 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { Queue } from 'bullmq';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UsuarioAutenticado } from '../auth/jwt.strategy';
 import { QUEUE } from '../config';
+import { aplicarMarcaDaguaZip } from './engine/watermark';
 import { CloneRequestDto } from './dto/clone-request.dto';
 import { CloneJobData, CloneJobResult, CloneProgress } from './types';
 import { parseFailedReason } from './clone.worker';
@@ -148,10 +150,10 @@ export class CloneController {
     response.send(html);
   }
 
-  // Baixar o zip limpo exige conta (login opcional no app, obrigatório aqui).
+  // Baixar exige conta. Free leva marca d'água; Pro baixa limpo.
   @UseGuards(JwtAuthGuard)
   @Get(':id/download')
-  async download(@Param('id') id: string, @Res() response: Response): Promise<void> {
+  async download(@Param('id') id: string, @Req() req: Request, @Res() response: Response): Promise<void> {
     const job = await this.queue.getJob(id).catch(() => null);
     const result = job?.returnvalue as CloneJobResult | undefined;
 
@@ -167,12 +169,26 @@ export class CloneController {
       throw new NotFoundException('Zip indisponível: o clone não terminou ou já expirou.');
     }
 
-    const stream = this.resultStore.openZip(id);
-    if (!stream) throw new NotFoundException('Zip indisponível.');
+    const user = req.user as UsuarioAutenticado | undefined;
+    const enviarCabecalhos = () => {
+      response.setHeader('Content-Type', 'application/zip');
+      response.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+    };
 
-    response.setHeader('Content-Type', 'application/zip');
-    response.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
-    stream.pipe(response);
+    // Pro: zip limpo (stream direto, sem carregar na memória).
+    if (user?.plano === 'pro') {
+      const stream = this.resultStore.openZip(id);
+      if (!stream) throw new NotFoundException('Zip indisponível.');
+      enviarCabecalhos();
+      stream.pipe(response);
+      return;
+    }
+
+    // Free: injeta a marca d'água no index.html antes de entregar.
+    const zip = await this.resultStore.readZip(id);
+    if (!zip) throw new NotFoundException('Zip indisponível.');
+    enviarCabecalhos();
+    response.send(aplicarMarcaDaguaZip(zip));
   }
 }
 

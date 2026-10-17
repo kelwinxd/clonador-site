@@ -14,7 +14,7 @@ async function pedir(caminho: 'register' | 'login', email: string, senha: string
   }
 
   const corpo = (await lerJson(resposta)) as
-    | { token?: string; user?: { email?: string }; message?: string | string[] }
+    | { token?: string; user?: { email?: string; plano?: string }; message?: string | string[] }
     | null;
 
   if (!resposta.ok) {
@@ -22,7 +22,11 @@ async function pedir(caminho: 'register' | 'login', email: string, senha: string
     throw new AuthError(Array.isArray(msg) ? msg.join(' ') : (msg ?? 'Não foi possível entrar.'));
   }
   if (!corpo?.token) throw new AuthError('Resposta inesperada do servidor.');
-  return salvarSessao({ token: corpo.token, email: corpo.user?.email ?? email });
+  return salvarSessao({
+    token: corpo.token,
+    email: corpo.user?.email ?? email,
+    plano: corpo.user?.plano ?? 'free',
+  });
 }
 
 export function registrar(email: string, senha: string): Promise<Sessao> {

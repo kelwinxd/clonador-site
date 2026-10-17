@@ -30,13 +30,16 @@ export default function PreviewPage() {
 
   const step = params.get('step') === '2' ? 2 : 1;
   const logado = !!sessao;
+  const ehPro = sessao?.plano === 'pro';
   const { resultado, blob, previa, previewUrl, previewSrc, status, erro } = app;
+  const [avisoPro, setAvisoPro] = useState(false);
 
   function irParaStep(s: 1 | 2) {
     setParams(s === 2 ? { step: '2' } : {});
   }
   function aoEditar() {
     if (!sessao) return navigate(ROTAS.criarConta);
+    if (!ehPro) return setAvisoPro(true);
     navigate(ROTAS.editor);
   }
   function aoBaixar() {
@@ -148,7 +151,7 @@ export default function PreviewPage() {
               <div className="preview-acoes">
                 <button type="button" className="botao-preview ghost" onClick={aoEditar}>
                   <IconeLapis /> Editar
-                  {!logado && <IconeCadeado />}
+                  {!ehPro && <IconeCadeado />}
                 </button>
                 <a
                   className="botao-preview ghost"
@@ -169,6 +172,13 @@ export default function PreviewPage() {
               </span>
             )}
           </div>
+
+          {avisoPro && (
+            <div className="aviso-pro" role="alert">
+              ✨ O <strong>editor</strong> é exclusivo do plano <strong>Pro</strong>. O clone do
+              plano grátis sai com uma marca d'água. (Upgrade para Pro via Stripe em breve.)
+            </div>
+          )}
 
           <div className={`browser-mock ${dispositivo}`}>
             <div className="chrome">
@@ -213,6 +223,13 @@ export default function PreviewPage() {
               <button type="button" className="cta pequeno" onClick={() => navigate(ROTAS.criarConta)}>
                 Criar conta
               </button>
+            </div>
+          )}
+
+          {pronto && logado && !ehPro && (
+            <div className="cta-conta">
+              Seu plano é <strong>grátis</strong>: o download sai com marca d'água e o editor é do
+              Pro. <strong>Vire Pro</strong> para baixar limpo e editar (em breve via Stripe).
             </div>
           )}
 

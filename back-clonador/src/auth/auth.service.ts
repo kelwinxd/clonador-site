@@ -12,11 +12,12 @@ import { UserRepository } from './user.repository';
 export interface JwtPayload {
   sub: string;
   email: string;
+  plano: string;
 }
 
 export interface AuthResult {
   token: string;
-  user: { id: string; email: string };
+  user: { id: string; email: string; plano: string };
 }
 
 @Injectable()
@@ -36,7 +37,7 @@ export class AuthService {
     const senhaHash = await bcrypt.hash(senha, 10);
     const user = await this.users.criar(normalizado, senhaHash);
     this.logger.log(`conta criada: ${normalizado}`);
-    return this.emitir(user.id, user.email);
+    return this.emitir(user.id, user.email, user.plano);
   }
 
   async entrar(email: string, senha: string): Promise<AuthResult> {
@@ -45,11 +46,11 @@ export class AuthService {
     // Mesma mensagem para e-mail inexistente e senha errada: não entrega quais e-mails existem.
     const ok = user && (await bcrypt.compare(senha, user.senhaHash));
     if (!user || !ok) throw new UnauthorizedException('E-mail ou senha incorretos.');
-    return this.emitir(user.id, user.email);
+    return this.emitir(user.id, user.email, user.plano);
   }
 
-  private emitir(id: string, email: string): AuthResult {
-    const payload: JwtPayload = { sub: id, email };
-    return { token: this.jwt.sign(payload), user: { id, email } };
+  private emitir(id: string, email: string, plano: string): AuthResult {
+    const payload: JwtPayload = { sub: id, email, plano };
+    return { token: this.jwt.sign(payload), user: { id, email, plano } };
   }
 }
