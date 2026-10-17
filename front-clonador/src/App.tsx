@@ -4,7 +4,7 @@ import './styles/auth.css';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { CloneProvider } from '@/features/clone/CloneContext';
 import { OverlayClonando } from '@/features/clone/components/OverlayClonando';
-import { ROTAS } from '@/shared/constants';
+import { RECAPTCHA_SITE_KEY, ROTAS } from '@/shared/constants';
 import ClonarPage from './pages/ClonarPage';
 import CriarContaPage from './pages/CriarContaPage';
 import EditorPage from './pages/EditorPage';
@@ -90,6 +90,20 @@ function Layout() {
         <Route path={ROTAS.entrar} element={<EntrarPage />} />
         <Route path="*" element={<Navigate to={ROTAS.clonar} replace />} />
       </Routes>
+
+      {RECAPTCHA_SITE_KEY && (
+        <footer className="rodape">
+          Este site é protegido por reCAPTCHA e aplicam-se a{' '}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
+            Política de Privacidade
+          </a>{' '}
+          e os{' '}
+          <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">
+            Termos de Serviço
+          </a>{' '}
+          do Google.
+        </footer>
+      )}
     </div>
   );
 }
