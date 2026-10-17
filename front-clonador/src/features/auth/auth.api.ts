@@ -1,6 +1,6 @@
-import { lerJson, postJson } from '@/shared/api/client';
+import { lerJson, postJson, request } from '@/shared/api/client';
 import { salvarSessao } from './auth.storage';
-import type { Sessao } from './auth.types';
+import type { Creditos, Sessao } from './auth.types';
 
 /** Erro de autenticação com mensagem pronta para a tela. */
 export class AuthError extends Error {}
@@ -35,4 +35,16 @@ export function registrar(email: string, senha: string): Promise<Sessao> {
 
 export function entrar(email: string, senha: string): Promise<Sessao> {
   return pedir('login', email, senha);
+}
+
+/** Busca os créditos atuais do usuário (GET /auth/me). null se falhar/sessão inválida. */
+export async function buscarCreditos(token: string): Promise<Creditos | null> {
+  try {
+    const resp = await request('/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+    if (!resp.ok) return null;
+    const corpo = (await lerJson(resp)) as { creditos?: Creditos } | null;
+    return corpo?.creditos ?? null;
+  } catch {
+    return null;
+  }
 }

@@ -14,12 +14,16 @@ datasource db {
 /// Conta de usuário. Login é opcional: clonar e pré-visualizar são livres;
 /// baixar o zip e editar exigem conta (Etapa 15).
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  senhaHash String
-  /// Plano do usuário: 'free' (download com marca d'água, sem editor) ou 'pro'.
-  plano     String   @default("free")
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  email          String   @unique
+  senhaHash      String
+  /// Plano: 'free' (cota mensal + marca d'água) ou 'pro' (ilimitado, limpo).
+  plano          String   @default("free")
+  /// Clones usados no ciclo atual (reseta a cada ~30 dias).
+  creditosUsados Int      @default(0)
+  /// Início do ciclo de créditos.
+  cicloReset     DateTime @default(now())
+  createdAt      DateTime @default(now())
 }
 
 /// Um registro por clone pedido (histórico, base para contas e cotas).

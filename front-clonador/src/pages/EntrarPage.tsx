@@ -11,7 +11,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Login de quem já tem conta. */
 export default function EntrarPage() {
   const { entrar } = useAuth();
-  const { resultado } = useClone();
+  const { resultado, clonarAoLogar } = useClone();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -28,7 +28,7 @@ export default function EntrarPage() {
     setEnviando(true);
     try {
       await entrar(email.trim(), senha);
-      navigate(resultado ? ROTAS.resultado : ROTAS.clonar);
+      navigate(clonarAoLogar || resultado ? ROTAS.resultado : ROTAS.clonar);
     } catch (problema) {
       setErro(problema instanceof AuthError ? problema.message : 'Algo deu errado. Tente de novo.');
     } finally {
@@ -47,7 +47,7 @@ export default function EntrarPage() {
             CLONE <span className="brand-ninja">NINJA</span>
           </span>
         </div>
-        <p className="login-sub">Entre para baixar e editar seus clones.</p>
+        <p className="login-sub">Entre para clonar e baixar seus clones.</p>
 
         <CamposConta
           email={email}

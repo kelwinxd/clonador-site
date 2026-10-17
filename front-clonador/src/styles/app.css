@@ -1213,3 +1213,22 @@ summary {
   font-size: 13px;
   color: var(--text);
 }
+
+/* Chip de créditos / plano no header */
+.chip-plano {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--orange);
+  border: 1px solid var(--orange);
+  white-space: nowrap;
+}
+.chip-plano.pro {
+  background: var(--orange);
+  color: #0e1520;
+}

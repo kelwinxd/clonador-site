@@ -23,7 +23,7 @@ export default function App() {
 }
 
 function Layout() {
-  const { sessao, logout } = useAuth();
+  const { sessao, creditos, logout } = useAuth();
   const navigate = useNavigate();
   const inicial = sessao?.email?.[0]?.toUpperCase() ?? '?';
 
@@ -49,6 +49,14 @@ function Layout() {
         <div className="conta">
           {sessao ? (
             <>
+              {creditos &&
+                (creditos.limite === null ? (
+                  <span className="chip-plano pro">Pro</span>
+                ) : (
+                  <span className="chip-plano" title="Clones restantes neste mês">
+                    ⚡ {creditos.restantes}/{creditos.limite}
+                  </span>
+                ))}
               <span className="avatar" aria-hidden="true">
                 {inicial}
               </span>

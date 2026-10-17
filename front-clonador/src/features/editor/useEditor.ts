@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/features/auth/AuthContext';
 import { reempacotarZip, type Preview } from '@/features/preview/preview';
 import { baixarArquivo } from '@/shared/utils';
 import {
@@ -10,6 +11,7 @@ import {
   mostrar,
   type EditorHandle,
 } from './editor';
+import { injetarMarcaDaguaHtml } from './watermark';
 
 /**
  * Lógica do editor da prévia. Encapsula o ciclo de vida (ligar/desligar no iframe), a seleção
@@ -17,6 +19,7 @@ import {
  * A UI (PainelEditor) só recebe o que este hook devolve.
  */
 export function useEditor(previa: Preview | null, blob: Blob | null, fileName: string | undefined) {
+  const { sessao } = useAuth();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const editorRef = useRef<EditorHandle | null>(null);
   const [editando, setEditando] = useState(false);
@@ -84,7 +87,9 @@ export function useEditor(previa: Preview | null, blob: Blob | null, fileName: s
   async function baixarEditado() {
     const doc = iframeRef.current?.contentDocument;
     if (!doc || !previa || !blob || !fileName) return;
-    const html = exportarHtml(doc, previa.mapa);
+    let html = exportarHtml(doc, previa.mapa);
+    // Free: garante a marca d'água no export (mesmo que tenham apagado o selo no editor).
+    if (sessao?.plano !== 'pro') html = injetarMarcaDaguaHtml(html);
     const zip = await reempacotarZip(blob, html);
     baixarArquivo(zip, fileName.replace(/\.zip$/i, '-editado.zip'));
   }

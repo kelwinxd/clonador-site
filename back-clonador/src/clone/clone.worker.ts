@@ -7,6 +7,7 @@ import { CloneErrorCode } from './engine/types';
 import { CloneJobData, CloneJobResult, SerializedError } from './types';
 import { redisConnection } from './queue.provider';
 import { CloneRepository } from './clone.repository';
+import { CreditsService } from '../auth/credits.service';
 import { IpGuardService } from './ip-guard.service';
 import { ResultStore } from './result-store';
 
@@ -28,6 +29,7 @@ export class CloneWorker implements OnModuleInit, OnModuleDestroy {
     // Opcionais: nos testes o worker é montado na mão. Em produção o Nest injeta.
     @Optional() private readonly history?: CloneRepository,
     @Optional() private readonly ipGuard?: IpGuardService,
+    @Optional() private readonly credits?: CreditsService,
   ) {}
 
   onModuleInit(): void {
@@ -68,6 +70,9 @@ export class CloneWorker implements OnModuleInit, OnModuleDestroy {
         fileName: result.fileName,
         meta: result.meta,
       });
+
+      // Clone concluído: consome 1 crédito do dono.
+      await this.credits?.consumir(job.data.userId);
 
       return { fileName: result.fileName, meta: result.meta };
     } catch (error) {

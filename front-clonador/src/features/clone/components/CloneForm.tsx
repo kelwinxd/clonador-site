@@ -1,16 +1,18 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/features/auth/AuthContext';
 import { ROTAS } from '@/shared/constants';
 import { SecaoTitulo } from '@/shared/ui/primitives';
 import { useClone } from '../CloneContext';
 import { prepararRecaptcha } from '../recaptcha';
 
 /**
- * Primeira página: só o endereço e o aceite. Links e pixels ficam para DEPOIS do clone (step 2
- * do resultado), porque não faz sentido configurar troca sem antes ver o que a página tem.
+ * Primeira página: só o endereço e o aceite. Links e pixels ficam para DEPOIS do clone (step 2).
+ * Clonar exige login — mas o login só é pedido ao CLICAR em clonar (a landing fica pública).
  */
 export function CloneForm() {
   const app = useClone();
+  const { sessao } = useAuth();
   const navigate = useNavigate();
 
   // Carrega o reCAPTCHA cedo, para o token sair rápido ao clicar em clonar.
@@ -20,6 +22,12 @@ export function CloneForm() {
 
   function enviar(evento: React.FormEvent) {
     evento.preventDefault();
+    if (!sessao) {
+      // Sem login: guarda a intenção e manda criar conta; ao logar, o clone dispara sozinho.
+      app.setClonarAoLogar(true);
+      navigate(ROTAS.criarConta);
+      return;
+    }
     app.iniciarClone();
     navigate(ROTAS.resultado);
   }

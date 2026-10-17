@@ -62,6 +62,8 @@ export interface CloneJobData {
   forceRender?: boolean;
   /** IP de quem pediu, para liberar a vaga de concorrência ao terminar. */
   ip?: string;
+  /** Usuário dono do clone (login é obrigatório), para consumir o crédito no sucesso. */
+  userId?: string;
 }
 
 /** Etapas do clone, na ordem em que acontecem. */

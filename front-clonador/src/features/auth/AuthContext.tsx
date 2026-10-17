@@ -1,14 +1,17 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
-import { entrar as apiEntrar, registrar as apiRegistrar } from './auth.api';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { buscarCreditos, entrar as apiEntrar, registrar as apiRegistrar } from './auth.api';
 import { lerSessao, limparSessao } from './auth.storage';
-import type { Sessao } from './auth.types';
+import type { Creditos, Sessao } from './auth.types';
 
-/** Estado de autenticação. Login é opcional no app; aqui mora a sessão e as ações de conta. */
+/** Estado de autenticação + créditos do ciclo. */
 interface AuthState {
   sessao: Sessao | null;
+  creditos: Creditos | null;
   registrar: (email: string, senha: string) => Promise<Sessao>;
   entrar: (email: string, senha: string) => Promise<Sessao>;
   logout: () => void;
+  /** Rebusca os créditos (ex.: depois de um clone). */
+  atualizarCreditos: () => void;
 }
 
 const Ctx = createContext<AuthState | null>(null);
@@ -21,6 +24,21 @@ export function useAuth(): AuthState {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessao, setSessao] = useState<Sessao | null>(() => lerSessao());
+  const [creditos, setCreditos] = useState<Creditos | null>(null);
+
+  function atualizarCreditos() {
+    if (!sessao) return;
+    void buscarCreditos(sessao.token).then((c) => c && setCreditos(c));
+  }
+
+  // Ao entrar (ou já estar logado), carrega os créditos.
+  useEffect(() => {
+    if (!sessao) {
+      setCreditos(null);
+      return;
+    }
+    void buscarCreditos(sessao.token).then((c) => c && setCreditos(c));
+  }, [sessao]);
 
   async function registrar(email: string, senha: string): Promise<Sessao> {
     const nova = await apiRegistrar(email, senha);
@@ -39,5 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSessao(null);
   }
 
-  return <Ctx.Provider value={{ sessao, registrar, entrar, logout }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ sessao, creditos, registrar, entrar, logout, atualizarCreditos }}>
+      {children}
+    </Ctx.Provider>
+  );
 }

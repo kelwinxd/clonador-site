@@ -104,11 +104,14 @@ Cada etapa tem um critério de pronto. Nada de "quase funcionando".
       `/editor` (edição em **tela cheia**, estilo Elementor), `/criar-conta` (cadastro + plano) e
       `/entrar`. Header com botão **"+ Novo clone"**; título sem estilo de link. Pagamento via
       Stripe fica na Etapa 16.
-- [~] **Cota/plano (parte da Etapa 15):** campo `plano` ('free'/'pro') no `User`. **Free** baixa
-      o zip COM marca d'água (selo injetado no `index.html` no download, via `watermark.ts`) e
-      **não** tem editor; **Pro** baixa limpo e tem editor. O JWT carrega o plano; o front trava o
-      botão Editar (cadeado) e mostra o upsell. **Vira Pro** só manualmente por enquanto (UPDATE no
-      banco) — a cobrança automática é a Etapa 16. Falta a **cota de quantidade** (X clones/dia).
+- [x] **Cota/plano (parte da Etapa 15):** campo `plano` ('free'/'pro') + `creditosUsados`/`cicloReset`
+      no `User`. **Login é obrigatório para clonar** (só pedido ao clicar em Clonar; a landing fica
+      pública). Cada clone com sucesso gasta 1 crédito; **Free = 3/mês** (`FREE_CREDITS_MES`), **Pro
+      ilimitado**; ciclo reseta a cada 30 dias. Enqueue checa crédito (402 SEM_CREDITO); worker
+      consome no sucesso. `GET /auth/me` devolve os créditos; o header mostra o chip (ex.: ⚡ 2/3).
+      **Download:** Free com marca d'água, Pro limpo. **Editor LIVRE pra todos**; no Free o export
+      editado reinjeta o selo (não dá pra remover pelo editor). "Vira Pro" ainda é manual (UPDATE no
+      banco) até a Etapa 16. Testado: 3 clones → 4º dá 402; Free com selo, Pro limpo.
 - [ ] **Etapa 16** — cobrança com Stripe (captura de cartão por Stripe Elements/Checkout; o
       número nunca passa pelo nosso servidor). Liga no botão de plano Pro e seta `plano='pro'`.
 - [ ] **Etapa 17** — deploy de 1 clique na conta Vercel do usuário.

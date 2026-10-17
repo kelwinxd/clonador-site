@@ -17,6 +17,7 @@ import {
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { Queue } from 'bullmq';
 import type { Request, Response } from 'express';
+import { CreditsService } from '../auth/credits.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsuarioAutenticado } from '../auth/jwt.strategy';
 import { QUEUE } from '../config';
@@ -64,14 +65,16 @@ export class CloneController {
     private readonly resultStore: ResultStore,
     private readonly recaptcha: RecaptchaService,
     private readonly ipGuard: IpGuardService,
+    private readonly credits: CreditsService,
   ) {}
 
-  // Limite de taxa só aqui (o clone é o caro). Status e download ficam livres.
-  @UseGuards(ThrottlerGuard)
+  // Clonar exige login (cada clone gasta 1 crédito). Rate limit extra por IP.
+  @UseGuards(JwtAuthGuard, ThrottlerGuard)
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   async enqueue(@Body() body: CloneRequestDto, @Req() req: Request): Promise<{ id: string }> {
     const ip = req.ip ?? 'desconhecido';
+    const user = req.user as UsuarioAutenticado;
 
     // 1. Anti-robô: valida o token do reCAPTCHA (pulado se o reCAPTCHA estiver desligado).
     if (!(await this.recaptcha.verificar(body.captchaToken, ip))) {
@@ -81,7 +84,15 @@ export class CloneController {
       );
     }
 
-    // 2. Concorrência por IP: no máximo N clones em andamento por IP ao mesmo tempo.
+    // 2. Cota: Free tem teto mensal de clones; Pro é ilimitado.
+    if (!(await this.credits.podeClonar(user.userId))) {
+      throw new HttpException(
+        { code: 'SEM_CREDITO', message: 'Você usou seus clones grátis do mês. Vire Pro para clonar mais.' },
+        HttpStatus.PAYMENT_REQUIRED,
+      );
+    }
+
+    // 3. Concorrência por IP: no máximo N clones em andamento por IP ao mesmo tempo.
     if (!(await this.ipGuard.entrar(ip))) {
       throw new HttpException(
         { code: 'RATE_LIMIT', message: 'Você já tem clones em andamento. Espere terminar antes de pedir outro.' },
@@ -93,7 +104,14 @@ export class CloneController {
     try {
       job = await this.queue.add(
         'clone',
-        { url: body.url, links: body.links, pixels: body.pixels, forceRender: body.forceRender, ip },
+        {
+          url: body.url,
+          links: body.links,
+          pixels: body.pixels,
+          forceRender: body.forceRender,
+          ip,
+          userId: user.userId,
+        },
         {
           removeOnComplete: { count: QUEUE.keepCompleted },
           removeOnFail: { count: QUEUE.keepFailed },

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { useAuth } from '@/features/auth/AuthContext';
 import { montarHtmlAutonomo, montarPreview, type Preview } from '@/features/preview/preview';
 import { ApiError } from '@/shared/api/errors';
-import { baixarZip, cloneSite, urlPreview } from './clone.api';
+import { baixarZip, cloneSite } from './clone.api';
 import type { CloneInfo, CloneProgress, LinkRule, PixelRule } from './clone.types';
 import { obterTokenRecaptcha } from './recaptcha';
 
@@ -37,6 +37,9 @@ interface CloneState {
   iniciarClone: () => void;
   usarCheckout: (url: string) => void;
   usarPixel: (id: string) => void;
+  /** Quem clicou em clonar sem estar logado: ao logar, o clone dispara sozinho. */
+  clonarAoLogar: boolean;
+  setClonarAoLogar: (v: boolean) => void;
 }
 
 const Ctx = createContext<CloneState | null>(null);
@@ -48,7 +51,7 @@ export function useClone(): CloneState {
 }
 
 export function CloneProvider({ children }: { children: ReactNode }) {
-  const { sessao } = useAuth();
+  const { sessao, atualizarCreditos } = useAuth();
 
   const [url, setUrl] = useState('');
   const [links, setLinks] = useState<LinkRule[]>([{ from: '', to: '' }]);
@@ -63,6 +66,7 @@ export function CloneProvider({ children }: { children: ReactNode }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [clonarAoLogar, setClonarAoLogar] = useState(false);
 
   const previaAnterior = useRef<Preview | null>(null);
   const previewUrlAnterior = useRef<string | null>(null);
@@ -88,23 +92,11 @@ export function CloneProvider({ children }: { children: ReactNode }) {
     setPreviewUrl(URL.createObjectURL(new Blob([htmlAutonomo], { type: 'text/html' })));
   }
 
-  // Reage ao login/logout enquanto há um clone na tela.
-  useEffect(() => {
-    if (!resultado) return;
-    if (sessao && !blob && status === 'pronto') {
-      carregarZip(resultado.id, sessao.token).catch(() =>
-        setErro('Entrou, mas não consegui preparar o download. Tente clonar de novo.'),
-      );
-    } else if (!sessao && (blob || previa)) {
-      setBlob(null);
-      setPrevia(null);
-      setPreviewSrc(urlPreview(resultado.id));
-    }
-    // Só quando a sessão muda: evita laço ao setar blob/prévia aqui dentro.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessao]);
-
   function iniciarClone() {
+    // Login é obrigatório para clonar; o formulário já redireciona quem não está logado.
+    if (!sessao) return;
+    const token = sessao.token;
+
     setStatus('clonando');
     setErro(null);
     setResultado(null);
@@ -125,12 +117,13 @@ export function CloneProvider({ children }: { children: ReactNode }) {
             pixels: pixels.filter((p) => p.from.trim() && p.to.trim()),
             captchaToken,
           },
+          token,
           setProgresso,
         );
         setResultado(clone);
-        if (sessao) await carregarZip(clone.id, sessao.token);
-        else setPreviewSrc(urlPreview(clone.id));
+        await carregarZip(clone.id, token);
         setStatus('pronto');
+        atualizarCreditos(); // o clone consumiu 1 crédito
       } catch (problema) {
         const apiError = problema instanceof ApiError ? problema : null;
         setErro(apiError?.message ?? 'Algo deu errado ao clonar. Tente de novo.');
@@ -138,6 +131,15 @@ export function CloneProvider({ children }: { children: ReactNode }) {
       }
     })();
   }
+
+  // Veio de "clonar sem login": assim que a sessão existir, dispara o clone.
+  useEffect(() => {
+    if (sessao && clonarAoLogar) {
+      setClonarAoLogar(false);
+      iniciarClone();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessao, clonarAoLogar]);
 
   function usarCheckout(checkoutUrl: string) {
     setLinks((atual) => {
@@ -176,6 +178,8 @@ export function CloneProvider({ children }: { children: ReactNode }) {
     iniciarClone,
     usarCheckout,
     usarPixel,
+    clonarAoLogar,
+    setClonarAoLogar,
   };
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;

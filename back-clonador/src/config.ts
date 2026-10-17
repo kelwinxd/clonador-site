@@ -132,6 +132,15 @@ export const WATERMARK = {
   url: process.env.WATERMARK_URL?.trim() || 'https://clonador-site-olive.vercel.app',
 } as const;
 
+/**
+ * Cota de clones por ciclo (créditos). Login é obrigatório para clonar; cada clone com sucesso
+ * gasta 1 crédito. Free tem teto mensal; Pro é ilimitado.
+ */
+export const CREDITOS = {
+  freePorCiclo: Number(process.env.FREE_CREDITS_MES ?? 3),
+  cicloDias: Number(process.env.CREDITS_CICLO_DIAS ?? 30),
+} as const;
+
 /** User-Agent de navegador real: muitas páginas recusam clientes sem isso. */
 export const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';

@@ -11,7 +11,8 @@ export type ApiErrorCode =
   | 'RATE_LIMIT'
   | 'NETWORK'
   | 'SESSAO'
-  | 'CAPTCHA';
+  | 'CAPTCHA'
+  | 'SEM_CREDITO';
 
 export const MENSAGEM_POR_CODIGO: Record<ApiErrorCode, string> = {
   INVALID_URL: 'Esse endereço não parece uma URL válida. Confira se começa com https://',
@@ -25,6 +26,7 @@ export const MENSAGEM_POR_CODIGO: Record<ApiErrorCode, string> = {
   NETWORK: 'Não consegui falar com a API. O backend está rodando?',
   SESSAO: 'Sua sessão expirou. Entre de novo para baixar.',
   CAPTCHA: 'A verificação anti-robô falhou. Recarregue a página e tente de novo.',
+  SEM_CREDITO: 'Você usou seus clones grátis do mês. Vire Pro para clonar mais.',
 };
 
 export class ApiError extends Error {

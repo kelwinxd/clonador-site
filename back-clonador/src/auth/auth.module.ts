@@ -5,6 +5,7 @@ import { AUTH } from '../config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { CreditsService } from './credits.service';
 import { JwtStrategy } from './jwt.strategy';
 import { UserRepository } from './user.repository';
 
@@ -21,7 +22,7 @@ import { UserRepository } from './user.repository';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, UserRepository, JwtStrategy, PrismaService],
-  exports: [PassportModule, JwtModule],
+  providers: [AuthService, UserRepository, CreditsService, JwtStrategy, PrismaService],
+  exports: [PassportModule, JwtModule, CreditsService],
 })
 export class AuthModule {}

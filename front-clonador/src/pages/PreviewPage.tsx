@@ -8,7 +8,6 @@ import { Deteccao } from '@/features/clone/components/Deteccao';
 import { ResumoClone } from '@/features/clone/components/ResumoClone';
 import { ROTAS } from '@/shared/constants';
 import {
-  IconeCadeado,
   IconeCelular,
   IconeDesktop,
   IconeDownload,
@@ -32,15 +31,13 @@ export default function PreviewPage() {
   const logado = !!sessao;
   const ehPro = sessao?.plano === 'pro';
   const { resultado, blob, previa, previewUrl, previewSrc, status, erro } = app;
-  const [avisoPro, setAvisoPro] = useState(false);
 
   function irParaStep(s: 1 | 2) {
     setParams(s === 2 ? { step: '2' } : {});
   }
   function aoEditar() {
     if (!sessao) return navigate(ROTAS.criarConta);
-    if (!ehPro) return setAvisoPro(true);
-    navigate(ROTAS.editor);
+    navigate(ROTAS.editor); // editor é livre para todos
   }
   function aoBaixar() {
     if (!resultado) return;
@@ -151,7 +148,6 @@ export default function PreviewPage() {
               <div className="preview-acoes">
                 <button type="button" className="botao-preview ghost" onClick={aoEditar}>
                   <IconeLapis /> Editar
-                  {!ehPro && <IconeCadeado />}
                 </button>
                 <a
                   className="botao-preview ghost"
@@ -163,7 +159,6 @@ export default function PreviewPage() {
                 </a>
                 <button type="button" className="botao-preview pronto" onClick={aoBaixar}>
                   <IconeDownload /> Baixar .zip
-                  {!logado && <IconeCadeado />}
                 </button>
               </div>
             ) : (
@@ -172,13 +167,6 @@ export default function PreviewPage() {
               </span>
             )}
           </div>
-
-          {avisoPro && (
-            <div className="aviso-pro" role="alert">
-              ✨ O <strong>editor</strong> é exclusivo do plano <strong>Pro</strong>. O clone do
-              plano grátis sai com uma marca d'água. (Upgrade para Pro via Stripe em breve.)
-            </div>
-          )}
 
           <div className={`browser-mock ${dispositivo}`}>
             <div className="chrome">
@@ -228,8 +216,8 @@ export default function PreviewPage() {
 
           {pronto && logado && !ehPro && (
             <div className="cta-conta">
-              Seu plano é <strong>grátis</strong>: o download sai com marca d'água e o editor é do
-              Pro. <strong>Vire Pro</strong> para baixar limpo e editar (em breve via Stripe).
+              Plano <strong>grátis</strong>: edite à vontade, mas o download sai com marca d'água.{' '}
+              <strong>Vire Pro</strong> para baixar limpo (em breve via Stripe).
             </div>
           )}
 

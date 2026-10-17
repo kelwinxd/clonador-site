@@ -30,21 +30,24 @@ interface StatusResponse {
  */
 export async function cloneSite(
   params: CloneParams,
+  token: string,
   onProgress?: (progress: CloneProgress) => void,
 ): Promise<CloneInfo> {
-  const id = await enfileirar(params);
+  const id = await enfileirar(params, token);
   const info = await acompanhar(id, onProgress);
   return { id, meta: info.meta, fileName: info.fileName };
 }
 
-async function enfileirar(params: CloneParams): Promise<string> {
+async function enfileirar(params: CloneParams, token: string): Promise<string> {
   let resposta: Response;
   try {
-    resposta = await postJson('/clone', params);
+    resposta = await postJson('/clone', params, { headers: { Authorization: `Bearer ${token}` } });
   } catch {
     throw new ApiError('NETWORK');
   }
+  if (resposta.status === 401) throw new ApiError('SESSAO');
   if (resposta.status === 429) throw new ApiError('RATE_LIMIT');
+  // 402 (sem crédito) e 403 (captcha) trazem { code } que o erroDoCorpo traduz.
   if (!resposta.ok) throw erroDoCorpo(await lerJson(resposta), resposta.status);
   const corpo = (await lerJson(resposta)) as { id?: string } | null;
   if (!corpo?.id) throw new ApiError('FETCH_FAILED', 'A API não devolveu o id do job.');

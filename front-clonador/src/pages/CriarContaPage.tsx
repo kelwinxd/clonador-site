@@ -13,7 +13,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Criação de conta: e-mail/senha + plano. Pagamento do Pro entra na Etapa 16 (Stripe). */
 export default function CriarContaPage() {
   const { registrar } = useAuth();
-  const { resultado } = useClone();
+  const { resultado, clonarAoLogar } = useClone();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -31,7 +31,7 @@ export default function CriarContaPage() {
     setEnviando(true);
     try {
       await registrar(email.trim(), senha);
-      navigate(resultado ? ROTAS.resultado : ROTAS.clonar);
+      navigate(clonarAoLogar || resultado ? ROTAS.resultado : ROTAS.clonar);
     } catch (problema) {
       setErro(problema instanceof AuthError ? problema.message : 'Algo deu errado. Tente de novo.');
     } finally {
@@ -50,7 +50,7 @@ export default function CriarContaPage() {
             CLONE <span className="brand-ninja">NINJA</span>
           </span>
         </div>
-        <p className="login-sub">Crie sua conta para baixar e editar seus clones.</p>
+        <p className="login-sub">Crie sua conta para clonar — 3 clones grátis por mês.</p>
 
         <CamposConta
           email={email}
