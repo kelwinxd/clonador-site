@@ -5,6 +5,7 @@ import type { PlanoId } from '@/features/auth/auth.types';
 import { useAuth } from '@/features/auth/AuthContext';
 import { CamposConta } from '@/features/auth/components/CamposConta';
 import { PlanoSelector } from '@/features/auth/components/PlanoSelector';
+import { TermosModal } from '@/features/auth/components/TermosModal';
 import { useClone } from '@/features/clone/CloneContext';
 import { ROTAS } from '@/shared/constants';
 
@@ -19,6 +20,8 @@ export default function CriarContaPage() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [plano, setPlano] = useState<PlanoId>('free');
+  const [aceitou, setAceitou] = useState(false);
+  const [modalTermos, setModalTermos] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -26,6 +29,7 @@ export default function CriarContaPage() {
     evento.preventDefault();
     if (!EMAIL_REGEX.test(email.trim())) return setErro('Digite um e-mail válido.');
     if (senha.length < 6) return setErro('A senha precisa de pelo menos 6 caracteres.');
+    if (!aceitou) return setErro('É preciso aceitar os termos de uso e a política de privacidade.');
 
     setErro(null);
     setEnviando(true);
@@ -73,6 +77,24 @@ export default function CriarContaPage() {
           </p>
         )}
 
+        <label className="termo-lgpd">
+          <input
+            type="checkbox"
+            checked={aceitou}
+            onChange={(e) => {
+              setAceitou(e.target.checked);
+              if (erro) setErro(null);
+            }}
+          />
+          <span>
+            Li e aceito os{' '}
+            <button type="button" className="link-termos" onClick={() => setModalTermos(true)}>
+              Termos de Uso e a Política de Privacidade
+            </button>{' '}
+            (LGPD).
+          </span>
+        </label>
+
         {erro && <span className="campo-erro">{erro}</span>}
 
         <button type="submit" className="cta" disabled={enviando}>
@@ -83,6 +105,8 @@ export default function CriarContaPage() {
           Já tem conta? <Link to={ROTAS.entrar}>Entrar</Link>
         </p>
       </form>
+
+      {modalTermos && <TermosModal onFechar={() => setModalTermos(false)} />}
     </div>
   );
 }
