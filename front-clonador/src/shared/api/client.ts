@@ -19,9 +19,11 @@ export function request(caminho: string, options?: RequestInit): Promise<Respons
 export function postJson(caminho: string, corpo: unknown, options?: RequestInit): Promise<Response> {
   return request(caminho, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
     body: JSON.stringify(corpo),
+    // `...options` antes; os headers por ÚLTIMO, já mesclados — senão um options.headers
+    // (ex.: Authorization) sobrescreveria tudo e derrubaria o Content-Type.
     ...options,
+    headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
   });
 }
 
